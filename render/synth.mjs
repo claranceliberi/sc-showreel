@@ -217,3 +217,28 @@ export function writeWav(path, bus) {
   }
   writeFileSync(path, buffer)
 }
+
+// Look-ahead peak limiter: gain reduction starts `attackSeconds` before a peak arrives (so
+// transients are never clipped) and recovers exponentially over `releaseSeconds`.
+export function limit(bus, { ceiling = 0.89, attackSeconds = 0.002, releaseSeconds = 0.09 } = {}) {
+  const attackSamples = Math.max(1, Math.round(attackSeconds * SAMPLE_RATE))
+  const releaseCoefficient = Math.exp(-1 / (releaseSeconds * SAMPLE_RATE))
+  const required = new Float32Array(bus.length)
+  for (let index = 0; index < bus.length; index++) {
+    const level = Math.max(Math.abs(bus.left[index]), Math.abs(bus.right[index]))
+    required[index] = level > ceiling ? ceiling / level : 1
+  }
+  // Backward pass: ramp the gain down linearly across the look-ahead window before each peak.
+  const gain = new Float32Array(bus.length).fill(1)
+  for (let index = bus.length - 1; index >= 0; index--) {
+    const next = index + 1 < bus.length ? gain[index + 1] : 1
+    gain[index] = Math.min(required[index], next + (1 - next) / attackSamples)
+  }
+  // Forward pass: never recover faster than the release allows.
+  let smoothed = 1
+  for (let index = 0; index < bus.length; index++) {
+    smoothed = Math.min(gain[index], 1 - (1 - smoothed) * releaseCoefficient) // gain[index] is a hard cap
+    bus.left[index] *= smoothed
+    bus.right[index] *= smoothed
+  }
+}
