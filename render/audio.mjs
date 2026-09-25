@@ -185,10 +185,14 @@ for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += SIXTEENTH) {
 
 // --- 8.50–10.00  s04: in-country -----------------------------------------------------------------
 subHit(effects, 8.5, { intensity: 0.5, length: 0.8, startFrequency: 110, endFrequency: 40 }) // whomp
-// The four outer glyphs hit Rwanda's border within 5 ms (8.621–8.626): a tight flam, not a roll.
-for (let bump = 0; bump < 4; bump++) {
-  tok(effects, 8.621 + bump * 0.0017, { pitch: 210 - bump * 18, intensity: 0.22, decay: 0.03, pan: [-0.5, 0.45, -0.2, 0.3][bump] })
-}
+tok(effects, 8.572, { pitch: 420, intensity: 0.22, decay: 0.012 }) // the line bursts out of the centre
+whoosh(effects, 8.6, { duration: 0.05, intensity: 0.12, panFrom: 0, panTo: 0, brightness: 2, seed: 87 })
+// D, i and the period hit Rwanda's rim together (8.619–8.620), the s at 8.624, the y grazes at 8.635.
+;[8.619, 8.62, 8.6205, 8.624].forEach((time, index) => {
+  tok(effects, time, { pitch: 210 - index * 18, intensity: 0.22, decay: 0.03, pan: [-0.5, 0.3, 0.45, -0.2][index] })
+})
+tok(effects, 8.635, { pitch: 260, intensity: 0.08, decay: 0.02, pan: 0.2 }) // y grazes
+tok(effects, 8.7, { pitch: 90, intensity: 0.12, decay: 0.06 }) // rim rebounds inward
 riser(effects, 9.75, 10.0, { intensity: 0.4, fromFrequency: 1500, toFrequency: 12000, seed: 51 }) // reverse cymbal
 whoosh(effects, 9.965, { duration: 0.15, intensity: 0.35, panFrom: 0, panTo: 0, brightness: 1.8 }) // fly-through
 

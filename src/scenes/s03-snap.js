@@ -13,8 +13,11 @@
   // The storyboard sank the HUD from 8.50–8.66, which left "10–30 ms" printed beside s04's bursting
   // "Data stays in-country." for ~6 frames. Starting 60 ms earlier with a shorter sink clears the
   // HUD by ~8.59, as s04's glyphs start to spread.
-  const HUD_EXIT_START = 8.44
-  const HUD_EXIT_DURATION = 0.1
+  // The slow-start exit ease kept the HUD mostly visible for ~70% of its sink, so at 8.44/0.10 it
+  // was still on screen when s04's silhouette swept over it at 8.52. Leave from 8.40 over 0.08 s so
+  // the last line (the comparison, +45 ms) is gone by ~8.525.
+  const HUD_EXIT_START = 8.4
+  const HUD_EXIT_DURATION = 0.08
   // Streak jitter buckets: each dot gets one (head delay, streak length) pair, so the streaks of the
   // regular 1° grid start and end at irregular radii instead of forming moiré rings.
   const BUCKETS = 32

@@ -391,11 +391,15 @@ window.SC = (() => {
     // render/render.mjs). [{ from, to, subframes }] in global seconds.
     motionBlurWindows: [],
   }
+  // Hits start a quarter frame early: the renderer's shutter is centred on each frame, so a hit
+  // starting exactly on a frame time would shake only half of that frame's samples and ghost it.
+  const HIT_LEAD = 0.25 / FPS
   function hitEnvelope(time, field) {
     let strongest = 0
     for (const hit of post.hits) {
-      if (time < hit.time) continue
-      const elapsed = time - hit.time
+      const start = hit.time - HIT_LEAD
+      if (time < start) continue
+      const elapsed = time - start
       const amount = field === 'aberration' ? hit.aberration ?? hit.intensity : hit.intensity
       strongest = Math.max(strongest, amount * Math.exp(-elapsed / (post.shakeDecay / 3)))
     }
