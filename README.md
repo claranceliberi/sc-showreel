@@ -4,6 +4,9 @@ A 1920×1080, 60 fps motion-graphics piece about Strettch Cloud, built as a dete
 page and rendered frame-by-frame in headless Chromium (true motion blur via sub-frame
 accumulation), with a synthesized sound-design track.
 
+**Latest render:** [`renders/strettch-cloud-showreel.mp4`](renders/strettch-cloud-showreel.mp4)
+(15.00 s · 1920×1080 · 60 fps · H.264 + AAC, 8-sample motion blur with 16–32 samples on fast moves).
+
 ## Build
 
 ```bash
@@ -11,7 +14,7 @@ npm install
 node tools/build-assets.mjs          # geo outlines, brand logo glyphs, fonts → src/data, assets/fonts
 node tools/build-rwanda.mjs          # 10m Rwanda border + neighbour dot grid → src/data/rwanda-hires.js (~25 s)
 node render/audio.mjs                # soundtrack → out/audio.wav
-node render/render.mjs video --audio out/audio.wav --out out/strettch-cloud-showreel.mp4
+node render/render.mjs video --audio out/audio.wav --out renders/strettch-cloud-showreel.mp4   # ~18 min on 4 CPUs
 ```
 
 Open `index.html` through any static server (`npx serve .`) for a live preview with a scrubber.
