@@ -111,7 +111,7 @@ for (let time = 2.5; time < TENSION_END - 0.01; time += 2 * BEAT) subHit(drums, 
 whoosh(effects, 2.8, { duration: 0.12, intensity: 0.15, panFrom: 0.3, panTo: -0.2, brightness: 1.2 }) // annotation retracts
 whoosh(effects, 3.2, { duration: 0.35, intensity: 0.35, panFrom: -0.8, panTo: 0.8 }) // camera pull-back
 tickTrain(effects, 3.0, 8, 0.0375, { from: 2200, to: 1300, intensity: 0.1, pan: -0.2, jitterSeed: 40 }) // "strettch" sinks
-tickTrain(effects, 3.0, 12, 0.025, { from: 1600, to: 3400, intensity: 0.09, pan: 0.2, jitterSeed: 60 }) // "Africa-first" rises
+tickTrain(effects, 3.1, 12, 0.01, { from: 1600, to: 3400, intensity: 0.09, pan: 0.2, jitterSeed: 60 }) // "Africa-first" rises (domino 3.10–3.21)
 tok(effects, 3.25, { pitch: 520, intensity: 0.45, decay: 0.015 }) // the period pops
 // Granular shimmer as the continent assembles outward from Kigali.
 whoosh(effects, 3.75, { duration: 0.8, intensity: 0.2, panFrom: -0.4, panTo: 0.4, brightness: 2 })
