@@ -108,14 +108,18 @@
       // "per request" and "peaks at 200 ms" sink (6.50–6.60).
       setAttrs(hud.perRise, { transform: S.translateY(S.sink(t, 6.5, 0.1, HUD.perRequest.depth)) })
       setAttrs(hud.peaksRise, { transform: S.translateY(S.sink(t, 6.5, 0.1, HUD.peaks.depth)) })
-      // Kicker roll inside the 336–382 window (6.55–6.75), local kicker sinks out at 8.50.
-      const roll = S.EASE.reveal(progress(t, 6.55, 6.75))
+      // Kicker roll inside the 336–382 window, local kicker sinks out with the HUD exit.
+      // The storyboard rolled it at 6.55–6.75, but then "Strettch Cloud · Kigali-1" sat above the
+      // still-unrolled "~110 ms" for half a second — attributing the far region's latency to SC.
+      // The label now changes together with the number (odometer roll-down starts at 7.00).
+      const KICKER_ROLL_START = 7.0
+      const roll = S.EASE.reveal(progress(t, KICKER_ROLL_START, KICKER_ROLL_START + 0.2))
       setAttrs(hud.kickerA, { transform: S.translateY(-HUD.kicker.depth * roll) })
       setAttrs(hud.kickerB, { transform: S.translateY(HUD.kicker.depth * (1 - roll) + S.sink(t, HUD_EXIT_START, HUD_EXIT_DURATION, HUD.kicker.depth)) })
-      // Unit "ms" snaps slate → violetLight over two frames at 6.58, then slides 703 → 715.
+      // Unit "ms" snaps slate → violetLight over two frames with the kicker roll, then slides 703 → 715.
       const carry = S.EASE.carry(progress(t, 7.0, 7.25))
       const unitX = HUD.unit.x + 12 * carry
-      setAttrs(hud.unitText, { fill: S.mix(COLOR.slate, COLOR.violetLight, progress(t, 6.58, 6.58 + 2 / 60)), x: api.round(unitX, 3) })
+      setAttrs(hud.unitText, { fill: S.mix(COLOR.slate, COLOR.violetLight, progress(t, KICKER_ROLL_START, KICKER_ROLL_START + 2 / 60)), x: api.round(unitX, 3) })
       // Odometer roll-down (SLOT mode): scaleX 1.15 → 0.94 and wght 300 → 800 (carry), then THUD.
       const scaleX = 1.15 + (0.94 - 1.15) * carry
       const scaleY = t < 7.25 ? 1 : tween(t, 7.25, 7.55, 0.93, 1, S.EASE.thud)
