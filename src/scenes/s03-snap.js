@@ -4,11 +4,18 @@
 // the camera crash-zooms 20× into Rwanda (1 dot → 828); the three real logo slabs lock onto
 // Kigali as the Kigali-1 pin, the packet lights the LED, and the odometer rolls down to 10–30 ms.
 (() => {
+  // The storyboard sank the HUD from 8.50–8.66, which left "10–30 ms" printed beside s04's bursting
+  // "Data stays in-country." for ~6 frames. Starting 60 ms earlier with a shorter sink clears the
+  // HUD (and the slab pin) by ~8.59, as s04's glyphs start to spread.
+  const HUD_EXIT_START = 8.44
+  const HUD_EXIT_DURATION = 0.1
+
   SC.scene({
     id: 's03-snap',
     start: 6.5,
     end: 8.7,
     z: 6,
+
 
     build(root, api) {
       const S = window.SC_SHARED
@@ -31,9 +38,9 @@
       logo.root.insertBefore(ledDisc, logo.markGroup)
       // Slab choreography in px (÷4 → logo units); centres are each slab's bbox centre.
       const slabs = [
-        { name: 'bottom', start: 6.81, offset: [-170, 0], centre: [13.76, 28.977], exit: 8.54 },
-        { name: 'middle', start: 6.845, offset: [-158.8, 19.8], centre: [16.979, 18.86], exit: 8.52 },
-        { name: 'top', start: 6.88, offset: [153.5, -45.2], centre: [17, 7.921], exit: 8.5 },
+        { name: 'bottom', start: 6.81, offset: [-170, 0], centre: [13.76, 28.977], exit: HUD_EXIT_START + 0.03 },
+        { name: 'middle', start: 6.845, offset: [-158.8, 19.8], centre: [16.979, 18.86], exit: HUD_EXIT_START + 0.015 },
+        { name: 'top', start: 6.88, offset: [153.5, -45.2], centre: [17, 7.921], exit: HUD_EXIT_START },
       ].map((slab) => ({ ...slab, node: logo.slabs[slab.name], polygon: api.logoSlabs[slab.name] }))
       // LED halo: the pre-rendered sprite at r 22, above the mark. Additive, so it reads as light
       // on the violet slab (a plain 60% violetLight wash is nearly invisible on #6B63FF).
@@ -67,7 +74,7 @@
       const { COLOR } = S
 
       // ---------------------------------------------------------------------------------------
-      // Pin: three-slab flam onto Kigali (6.81 / 6.845 / 6.88), exits reversed from 8.50.
+      // Pin: three-slab flam onto Kigali (6.81 / 6.845 / 6.88), exits reversed with the HUD.
       // ---------------------------------------------------------------------------------------
       const slabStates = state.slabs.map((slab) => slabState(slab, t, S, api))
 
@@ -104,7 +111,7 @@
       // Kicker roll inside the 336–382 window (6.55–6.75), local kicker sinks out at 8.50.
       const roll = S.EASE.reveal(progress(t, 6.55, 6.75))
       setAttrs(hud.kickerA, { transform: S.translateY(-HUD.kicker.depth * roll) })
-      setAttrs(hud.kickerB, { transform: S.translateY(HUD.kicker.depth * (1 - roll) + S.sink(t, 8.5, 0.12, HUD.kicker.depth)) })
+      setAttrs(hud.kickerB, { transform: S.translateY(HUD.kicker.depth * (1 - roll) + S.sink(t, HUD_EXIT_START, HUD_EXIT_DURATION, HUD.kicker.depth)) })
       // Unit "ms" snaps slate → violetLight over two frames at 6.58, then slides 703 → 715.
       const carry = S.EASE.carry(progress(t, 7.0, 7.25))
       const unitX = HUD.unit.x + 12 * carry
@@ -121,9 +128,9 @@
       // clipped at the unit's left edge so a rolling digit never draws through "ms".
       const edgeLocal = O.x + (unitX - 4 - O.x) / scaleX
       setAttrs(hud.edgeRect, { x: -4000, width: api.round(edgeLocal + 4000, 3) })
-      // Exit over s04: kicker 8.50, number 8.52, unit 8.54 (sink through their edges, 0.12 s).
-      setAttrs(hud.numberRise, { transform: S.translateY(S.sink(t, 8.52, 0.12, O.riseDepth)) })
-      setAttrs(hud.unitRise, { transform: S.translateY(S.sink(t, 8.54, 0.12, O.riseDepth)) })
+      // Exit ahead of s04's burst: kicker, number, unit sink 15 ms apart (see HUD_EXIT_START).
+      setAttrs(hud.numberRise, { transform: S.translateY(S.sink(t, HUD_EXIT_START + 0.015, HUD_EXIT_DURATION, O.riseDepth)) })
+      setAttrs(hud.unitRise, { transform: S.translateY(S.sink(t, HUD_EXIT_START + 0.03, HUD_EXIT_DURATION, O.riseDepth)) })
     },
   })
 

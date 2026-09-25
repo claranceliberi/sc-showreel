@@ -164,8 +164,9 @@ for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += SIXTEENTH) {
 
 // --- 8.50–10.00  s04: in-country -----------------------------------------------------------------
 subHit(effects, 8.5, { intensity: 0.7, length: 0.8, startFrequency: 110, endFrequency: 40 }) // whomp
+// The four outer glyphs hit Rwanda's border within 5 ms (8.621–8.626): a tight flam, not a roll.
 for (let bump = 0; bump < 4; bump++) {
-  tok(effects, 8.62 + bump * 0.03, { pitch: 210 - bump * 18, intensity: 0.25 - bump * 0.04, decay: 0.025, pan: [-0.4, 0.3, -0.1, 0.45][bump] })
+  tok(effects, 8.621 + bump * 0.0017, { pitch: 210 - bump * 18, intensity: 0.22, decay: 0.03, pan: [-0.5, 0.45, -0.2, 0.3][bump] })
 }
 riser(effects, 9.75, 10.0, { intensity: 0.4, fromFrequency: 1500, toFrequency: 12000, seed: 51 }) // reverse cymbal
 whoosh(effects, 9.965, { duration: 0.15, intensity: 0.35, panFrom: 0, panTo: 0, brightness: 1.8 }) // fly-through
