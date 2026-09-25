@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Strettch Cloud Showreel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @font-face { font-family: 'Inter'; src: url('assets/fonts/inter-var.woff2') format('woff2'); font-weight: 100 900; }
+  @font-face { font-family: 'Space Grotesk'; src: url('assets/fonts/space-grotesk-var.woff2') format('woff2'); font-weight: 300 700; }
+  @font-face { font-family: 'JetBrains Mono'; src: url('assets/fonts/jetbrains-mono-var.woff2') format('woff2'); font-weight: 100 800; }
+  @font-face { font-family: 'Instrument Serif'; src: url('assets/fonts/instrument-serif.woff2') format('woff2'); font-weight: 400; font-style: normal; }
+  @font-face { font-family: 'Instrument Serif'; src: url('assets/fonts/instrument-serif-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
+
+  html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
+  /* The 1920×1080 frame. In render mode the viewport is exactly this size; in preview it is scaled to fit. */
+  #frame { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #07061A; transform-origin: 0 0; }
+  .sc-stage { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .sc-scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
+  .sc-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 1000;
+    background: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(2,1,12,0.55) 100%); }
+  .sc-grain { position: absolute; inset: 0; pointer-events: none; z-index: 1001; mix-blend-mode: overlay; }
+
+  /* Preview player — hidden when ?render=1 */
+  #controls { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px;
+    background: rgba(7,6,26,0.85); color: #D1CFFF; font: 13px 'JetBrains Mono', monospace; z-index: 2000; }
+  #controls button { background: #6B63FF; color: #fff; border: 0; border-radius: 6px; padding: 6px 14px; font: inherit; cursor: pointer; }
+  #controls input[type=range] { flex: 1; accent-color: #6B63FF; }
+  body.render #controls { display: none; }
+</style>
+</head>
+<body>
+<div id="frame"></div>
+<div id="controls">
+  <button id="play" type="button">Play</button>
+  <input id="scrub" type="range" min="0" max="15" step="0.001" value="0" aria-label="Timeline">
+  <span id="clock">0.000s</span>
+</div>
+
+<script src="src/data/geo.js"></script>
+<script src="src/data/logo.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/post-config.js"></script>
+<script src="src/scenes/index.js"></script>
+<script>
+  // Scene files are listed in src/scenes/index.js (window.SC_SCENE_FILES) so each scene lives in
+  // its own module and can be built independently.
+  const renderMode = new URLSearchParams(location.search).has('render')
+  if (renderMode) document.body.classList.add('render')
+
+  function loadScript(source) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = source
+      script.onload = resolve
+      script.onerror = () => reject(new Error(`failed to load ${source}`))
+      document.body.appendChild(script)
+    })
+  }
+
+  window.__scReady = (async () => {
+    for (const file of window.SC_SCENE_FILES) await loadScript(`src/scenes/${file}`)
+    await SC.init()
+  })()
+
+  if (!renderMode) {
+    const frame = document.getElementById('frame')
+    const fit = () => {
+      const scale = Math.min(window.innerWidth / 1920, (window.innerHeight - 48) / 1080)
+      frame.style.transform = `scale(${scale})`
+    }
+    window.addEventListener('resize', fit)
+    fit()
+
+    const playButton = document.getElementById('play')
+    const scrubber = document.getElementById('scrub')
+    const clock = document.getElementById('clock')
+    const soundtrack = new Audio('out/audio.wav')
+    let playing = false
+    let playStartedAt = 0
+    let playStartedFrom = 0
+
+    const show = (time) => { SC.seek(time); scrubber.value = time; clock.textContent = `${time.toFixed(3)}s` }
+    const tick = (now) => {
+      if (!playing) return
+      const time = playStartedFrom + (now - playStartedAt) / 1000
+      if (time >= 15) { playing = false; playButton.textContent = 'Play'; show(0); soundtrack.pause(); return }
+      show(time)
+      requestAnimationFrame(tick)
+    }
+    playButton.addEventListener('click', () => {
+      playing = !playing
+      playButton.textContent = playing ? 'Pause' : 'Play'
+      if (playing) {
+        playStartedAt = performance.now()
+        playStartedFrom = Number(scrubber.value) >= 14.99 ? 0 : Number(scrubber.value)
+        soundtrack.currentTime = playStartedFrom
+        soundtrack.play().catch(() => {})
+        requestAnimationFrame(tick)
+      } else {
+        soundtrack.pause()
+      }
+    })
+    scrubber.addEventListener('input', () => { playing = false; playButton.textContent = 'Play'; soundtrack.pause(); show(Number(scrubber.value)) })
+    window.__scReady.then(() => show(0))
+  }
+</script>
+</body>
+</html>
