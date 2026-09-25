@@ -193,7 +193,12 @@ for (let time = 11.5; time < 12.5 - 0.01;) { // snare roll 16ths → 32nds
   time += progress < 0.5 ? SIXTEENTH : THIRTY_SECOND
 }
 riser(effects, 11.5, 12.5, { intensity: 0.4, fromFrequency: 300, toFrequency: 8000, seed: 61 })
-glitch(effects, 12.25, { duration: 0.25, intensity: 0.22, seed: 71 })
+// Fuse: each line's type sinks while a paper bar wipes in on the logo angle (line 1, line 3,
+// then the price line last); the price drops out as one unit at 12.272–12.337.
+whoosh(effects, 12.34, { duration: 0.15, intensity: 0.14, panFrom: -0.7, panTo: 0.7, brightness: 1.5, seed: 81 }) // bar 1 wipe 12.25–12.40
+whoosh(effects, 12.373, { duration: 0.15, intensity: 0.12, panFrom: -0.7, panTo: 0.7, brightness: 1.2, seed: 83 }) // bar 3 wipe 12.283–12.433
+whoosh(effects, 12.407, { duration: 0.15, intensity: 0.16, panFrom: -0.7, panTo: 0.7, brightness: 1.0, seed: 85 }) // bar 2 wipe 12.317–12.467
+tok(effects, 12.3, { pitch: 120, intensity: 0.3, decay: 0.035 }) // "3,999" drops out
 
 // --- 12.50–15.00  s06: lockup and resolve ----------------------------------------------------------
 subHit(effects, 12.5, { intensity: 1.0, length: 1.2, startFrequency: 150, endFrequency: 40 })
