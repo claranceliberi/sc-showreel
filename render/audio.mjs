@@ -135,21 +135,36 @@ tok(effects, 5.0, { pitch: 1400, intensity: 0.2, decay: 0.01, pan: -0.25 })
 pluck(effects, 5.25, { frequency: 82, duration: 1.2, intensity: 0.35, brightness: 0.35, seed: 31 }) // route plucked
 pluck(effects, 5.25, { frequency: 82.9, duration: 1.2, intensity: 0.25, brightness: 0.35, seed: 37 })
 glitch(effects, 5.25, { duration: 0.2, intensity: 0.2 })
-riser(effects, 5.5, 6.5, { intensity: 0.6, fromFrequency: 200, toFrequency: 9000, seed: 41 }) // tension riser
-chirp(effects, 5.5, { from: 600, to: 1800, length: 1.0, intensity: 0.05 }) // string-tension whine
+// Tension: the band is dragged south and trembles (5.50–6.42, 6→16 Hz), dies 6.42–6.48, and the
+// frame holds dead still for one breath before the snap. The riser cuts on that breath.
+riser(effects, 5.5, 6.483, { intensity: 0.6, fromFrequency: 200, toFrequency: 9000, seed: 41 }) // tension riser
+chirp(effects, 5.5, { from: 600, to: 1900, length: 0.92, intensity: 0.05 }) // string-tension whine (tremble 5.50–6.42)
+tok(effects, 6.4, { pitch: 95, intensity: 0.12, decay: 0.03 }) // last yank of the Cape Town end
 
-// --- 6.50–8.50  s03: THE SNAP and the release groove --------------------------------------------
+// --- 6.50–8.50  s03: THE SNAP, the crash-zoom and the release groove -----------------------------
+// Event times come from the TIME table in src/scenes/shared-map.js.
 subHit(effects, 6.5, { intensity: 1.45, length: 1.4, startFrequency: 170, endFrequency: 34 }) // the film's biggest low end
 subHit(effects, 6.59, { intensity: 0.35, length: 0.6, startFrequency: 160, endFrequency: 38 }) // slapback
-snap(effects, 6.5, { intensity: 0.45 })
-whoosh(effects, 6.62, { duration: 0.6, intensity: 0.5, panFrom: -0.9, panTo: 0.9, brightness: 1.5 }) // crash-zoom
+snap(effects, 6.5, { intensity: 0.45 }) // the band lets go
 crash(reverbSend, 6.5, { intensity: 0.12, length: 1.2 })
-tok(effects, 6.93, { pitch: 180, intensity: 0.4, decay: 0.03 }) // slab 1
-tok(effects, 6.965, { pitch: 240, intensity: 0.4, decay: 0.03 }) // slab 2
-tok(effects, 7.0, { pitch: 320, intensity: 0.45, decay: 0.035 }) // slab 3
-chirp(effects, 7.0, { from: 2000, to: 4200, length: 0.05, intensity: 0.12 }) // LED chirp
-tickTrain(effects, 7.0, 8, THIRTY_SECOND / 1.0, { from: 3200, to: 1500, intensity: 0.12, jitterSeed: 120 }) // roll-down
-tok(effects, 7.25, { pitch: 140, intensity: 0.45, decay: 0.04 }) // "10–30 ms" lock thud
+whoosh(effects, 6.56, { duration: 0.1, intensity: 0.2, panFrom: 0.4, panTo: -0.1, brightness: 1.8, seed: 13 }) // whip home 6.50–6.573
+tok(effects, 6.573, { pitch: 110, intensity: 0.45, decay: 0.05 }) // band lands on Kigali: impact ring + shockwave
+tok(effects, 6.618, { pitch: 300, intensity: 0.12, decay: 0.02, pan: -0.2 }) // overshoot peak
+whoosh(effects, 6.96, { duration: 0.35, intensity: 0.5, panFrom: -0.9, panTo: 0.9, brightness: 1.6 }) // crash-zoom 6.75–7.10, fastest ~6.85
+tok(effects, 7.0625, { pitch: 180, intensity: 0.4, decay: 0.03 }) // bottom slab lands
+tok(effects, 7.09375, { pitch: 240, intensity: 0.4, decay: 0.03 }) // middle slab lands
+tok(effects, 7.125, { pitch: 320, intensity: 0.45, decay: 0.035 }) // top slab locks
+chirp(effects, 7.125, { from: 2000, to: 4200, length: 0.05, intensity: 0.12 }) // LED lights
+// Odometer roll-down 7.125 → locks at 7.1875 / 7.234 / 7.281 / 7.328 / 7.375.
+tickTrain(effects, 7.125, 8, 0.03125, { from: 3200, to: 1500, intensity: 0.1, jitterSeed: 120 })
+;[7.1875, 7.234, 7.281, 7.328].forEach((time, index) => tick(effects, time, { pitch: 2400 - index * 150, intensity: 0.16, seed: 140 + index }))
+tok(effects, 7.375, { pitch: 140, intensity: 0.45, decay: 0.04 }) // "10–30 ms" lock thud
+tick(effects, 7.42, { pitch: 1400, intensity: 0.08, pan: -0.3, seed: 150 }) // comparison line rises
+for (const time of [7.5, 8.0]) { // LED heartbeat ring + ripple through lit Rwanda
+  const sine = createSine()
+  addVoice(effects, time, 0.14, (index) => sine(988) * expDecay(index / SAMPLE_RATE, 0.03), { gain: 0.08, pan: 0.45 })
+  bell(effects, time + 0.02, 100, { duration: 0.3, intensity: 0.025, pan: 0.5 })
+}
 
 const GROOVE_START = 7.0
 const GROOVE_END = 12.5

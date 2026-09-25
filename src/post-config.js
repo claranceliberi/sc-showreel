@@ -6,7 +6,8 @@
 SC.post.hits = [
   { time: 1.5, intensity: 0.6, aberration: 0.3 }, // the extra t lands
   { time: 6.5, intensity: 1.0, aberration: 0.3 }, // the route snaps home
-  { time: 7.0, intensity: 0.3, aberration: 0.15 }, // logo slabs lock onto Kigali
+  { time: 6.573, intensity: 0.3, aberration: 0.1 }, // the band lands on Kigali
+  { time: 7.125, intensity: 0.3, aberration: 0.15 }, // top logo slab locks onto Kigali
   { time: 8.5, intensity: 0.4, aberration: 0.25 }, // Rwanda becomes the container
   { time: 12.5, intensity: 0.8, aberration: 0 }, // spec lines fuse into the mark
   { time: 13.25, intensity: 0.2, aberration: 0 }, // the extra t shoves the wordmark
@@ -26,10 +27,12 @@ SC.post.vignette = [
 // blur. Render-only: read by render/render.mjs.
 SC.post.motionBlurWindows = [
   { from: 1.25, to: 1.55, subframes: 32 }, // the tear and the extra-t impact
-  { from: 2.95, to: 3.25, subframes: 32 }, // camera pull-back to "Africa-first"
-  { from: 6.45, to: 7.15, subframes: 32 }, // the snap and the crash-zoom
+  { from: 2.8, to: 3.25, subframes: 32 }, // camera pull-back and the word swap
+  { from: 5.24, to: 5.62, subframes: 16 }, // the pluck and the 200 ms spike
+  { from: 5.85, to: 6.49, subframes: 16 }, // the rising tremble
+  { from: 6.49, to: 7.4, subframes: 32 }, // snap, crash-zoom, slab flam, odometer roll
   { from: 8.45, to: 8.72, subframes: 32 }, // Rwanda push and the glyph burst
   { from: 9.82, to: 10.02, subframes: 32 }, // fly-through into violet
-  { from: 12.2, to: 12.72, subframes: 32 }, // fuse, ink flood, bars spring into the mark
-  { from: 13.2, to: 13.45, subframes: 32 }, // the extra t drops and shoves
+  { from: 12.2, to: 13.0, subframes: 32 }, // fuse, ink flood, bars spring into the mark, wordmark rise
+  { from: 13.08, to: 13.35, subframes: 32 }, // the extra t drops and shoves
 ]

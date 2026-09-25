@@ -1,8 +1,12 @@
 // s02-far · 3.250–6.500 s · z 5 — PROBLEM, THE TENSION.
 // The continent assembles as a shockwave out of Kigali (the period). A request travels to the
-// nearest hyperscaler region in Cape Town and back while the odometer counts to ~110 ms. The
-// route is plucked on the 200 ms spike and trembles under a riser, then freezes at 6.500 into the
-// exact state s03-snap re-creates (all shared formulas live in shared-map.js).
+// nearest hyperscaler region in Cape Town (labelled on the map) and back while the odometer
+// counts to ~110 ms. At 5.25 the route is plucked and the count spikes to 200 ("peaks at 200 ms")
+// and relaxes. Then the band visibly strains under the riser: the camera pushes in (Z 1 → 1.08),
+// the Cape Town end is dragged ~64 px further out while the lanes thin 2.5 → 1.2 px, and a
+// standing wave (1–2 nodes, 6 → 16 Hz, up to ~46 px) trembles along it — until it freezes at
+// 6.48, one held breath before s03-snap releases it. All shared formulas live in shared-map.js
+// (TIME holds every event time), so s03's first frame is this scene's exit state.
 SC.scene({
   id: 's02-far',
   start: 3.25,
@@ -34,13 +38,15 @@ SC.scene({
 
   render(t, state, api) {
     const { S, context, field, startTime, hud, halo, segs, radii } = state
-    const { K, C, COLOR, REST } = S
+    const { K, C, COLOR, TIME } = S
     const { progress, tween, ease } = api
 
     // ---------------------------------------------------------------------------------------
     // Map canvas
     // ---------------------------------------------------------------------------------------
     S.resetContext(context)
+    // Camera: Z = 1 until the 5.00 push-in (→ 1.08 at 6.500, about Kigali).
+    const Z = S.zoomZ(t)
 
     // Dots: shockwave assembly out of Kigali. Radius 0 → 2.6 (outBack), position from
     // K + 0.85·(P − K) to P (outCubic), each over 0.220 s from its own start time.
@@ -49,7 +55,7 @@ SC.scene({
       if (index === field.rwandaIndex) continue
       const amount = progress(t, startTime[index], startTime[index] + 0.22)
       if (amount <= 0) continue
-      const reach = amount >= 1 ? 1 : 0.85 + 0.15 * ease.outCubic(amount)
+      const reach = (amount >= 1 ? 1 : 0.85 + 0.15 * ease.outCubic(amount)) * Z
       const x = K.x + field.rx[index] * reach
       const y = K.y + field.ry[index] * reach
       const offset = visible * 4
@@ -66,7 +72,7 @@ SC.scene({
       const index = field.rwandaIndex
       const amount = progress(t, startTime[index], startTime[index] + 0.22)
       if (amount > 0) {
-        const reach = amount >= 1 ? 1 : 0.85 + 0.15 * ease.outCubic(amount)
+        const reach = (amount >= 1 ? 1 : 0.85 + 0.15 * ease.outCubic(amount)) * Z
         const radius = amount >= 1 ? field.rwandaRadius : field.rwandaRadius * ease.outBack(amount)
         S.fillDisc(context, COLOR.violetLight, K.x + field.rx[index] * reach, K.y + field.ry[index] * reach, radius)
       }
@@ -85,17 +91,21 @@ SC.scene({
       S.strokeRing(context, COLOR.violetLight, K.x, K.y, radius, 2, 0.8 * (1 - amount))
     }
 
-    // Lanes draw behind the packet (out 4.00–4.50, return 4.50–5.00), then stay; the pluck and
-    // the tremble displace them along n̂.
+    // Lanes draw behind the packet (out 4.00–4.50, return 4.50–5.00), then stay. From 5.25 the
+    // band is plucked, dragged further out (thinning 2.5 → 1.2 px) and trembles as a standing
+    // wave with rising frequency; all of it frozen to exactly lanes(E_RELEASE) by 6.48.
+    const node = S.preEnd(t) // the Cape Town node rides the band's far end
     if (t >= 4.0) {
-      const amplitude = S.routeAmplitude(t)
+      const route = S.routeAt(t)
+      const wave = S.routeWave(t)
+      const widths = S.laneWidths(t)
       const packetS = S.packetS(t)
       if (t >= 4.5) {
         const from = t < 5.0 ? packetS : 0
-        if (from < 1) S.strokeLane(context, S.laneSamples(REST, 'ret', from, 1, amplitude), COLOR.slate, S.LANE_STYLE.ret.width, S.LANE_STYLE.ret.alpha)
+        if (from < 1) S.strokeLane(context, S.laneSamples(route, 'ret', from, 1, wave), COLOR.slate, widths.ret, widths.retAlpha)
       }
       const to = t < 4.5 ? packetS : 1
-      S.strokeLane(context, S.laneSamples(REST, 'out', 0, to, amplitude), COLOR.slate, S.LANE_STYLE.out.width, S.LANE_STYLE.out.alpha)
+      S.strokeLane(context, S.laneSamples(route, 'out', 0, to, wave), COLOR.slate, widths.out, widths.outAlpha)
     }
 
     // Packet with its 8-ghost trail and streak.
@@ -104,14 +114,16 @@ SC.scene({
     // Kigali dot + halo (3·r at 35%).
     S.drawKigali(context, halo, kigaliRadius)
 
-    // Cape Town node pops on the 4.50 downbeat; impact rings at 4.50 and 5.50.
+    // Cape Town node pops on the 4.50 downbeat; impact rings at 4.50 and 5.50. The on-map
+    // "Cape Town" label types on with it and rides the node as the band drags it south.
     if (t >= 4.5) {
-      S.drawCapeTownNode(context, C.x, C.y, ease.outBack(progress(t, 4.5, 4.65)))
+      S.drawCapeTownNode(context, node.x, node.y, ease.outBack(progress(t, 4.5, 4.65)))
       for (const hit of [4.5, 5.5]) {
         if (t < hit || t >= hit + 0.25) continue
         const amount = (t - hit) / 0.25
-        S.strokeRing(context, COLOR.slate, C.x, C.y, 9 + 25 * ease.outCubic(amount), 2, 0.7 * (1 - amount))
+        S.strokeRing(context, COLOR.slate, node.x, node.y, 9 + 25 * ease.outCubic(amount), 2, 0.7 * (1 - amount))
       }
+      S.drawCapeTownLabel(context, node, S.labelTyped(t))
     }
 
     // ---------------------------------------------------------------------------------------
@@ -128,12 +140,19 @@ SC.scene({
     const riseY = S.rise(t, 4.55, 0.2, S.ODOMETER.riseDepth)
     api.setAttrs(hud.numberRise, { transform: S.translateY(riseY) })
     api.setAttrs(hud.unitRise, { transform: S.translateY(riseY) })
-    const value = 110 * ease.inOutQuad(progress(t, 4.0, 5.0))
+    // THE PLUCK (5.25) is the 200 ms spike made visible: the count whips up to 200 in 60 ms,
+    // holds for 3 frames as "peaks at 200 ms" rises, and relaxes back to ~110 by 5.60.
+    const spike = t < TIME.pluck
+      ? 0
+      : t < TIME.pluck + 0.06
+        ? ease.outCubic(progress(t, TIME.pluck, TIME.pluck + 0.06))
+        : 1 - ease.inOutCubic(progress(t, TIME.pluck + 0.11, TIME.pluck + 0.35))
+    const value = 110 * ease.inOutQuad(progress(t, 4.0, 5.0)) + 90 * spike
     S.countOffsets(value).forEach((offset, index) => {
       api.setAttrs(hud.cells[index + 1].roll, { transform: S.translateY(-offset * S.ODOMETER.em) })
     })
-    // LOCK at ~110: the digits flash #FFFFFF for two frames.
-    const flash = t >= 5.0 && t < 5.0 + 2 / 60
+    // LOCK at ~110 (and the 200 peak): the digits flash #FFFFFF for two frames.
+    const flash = (t >= 5.0 && t < 5.0 + 2 / 60) || (t >= TIME.pluck + 0.06 && t < TIME.pluck + 0.06 + 2 / 60)
     for (let index = 1; index <= 3; index++) api.setAttrs(hud.cells[index].cell, { fill: flash ? COLOR.white : COLOR.paper })
 
     api.setAttrs(hud.perRise, { transform: S.translateY(S.rise(t, 5.0, 0.1, S.HUD.perRequest.depth)) })

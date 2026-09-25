@@ -6,6 +6,10 @@
 // canvas draw primitives and the HUD layout both scenes use, because "re-create s02's exit state
 // exactly" is only trustworthy when both frames come out of one function.
 //
+// Revision 2 (after the ECD critique): one TIME table drives the tension build (pull, tremble,
+// push-in), the snap at Z ≈ 1.1, the 6.75 crash zoom, the pin flam and the odometer roll; the
+// band's far end is a screen-space spring toward the zoom pivot K, so the recoil never balloons.
+//
 // Loaded before the scenes (src/scenes/index.js). Pure functions of t only; never calls SC.scene.
 window.SC_SHARED = (() => {
   const SC = window.SC
@@ -17,10 +21,12 @@ window.SC_SHARED = (() => {
   // ------------------------------------------------------------------------------------------
   const COLOR = {
     ink: tokens.ink,
-    dotDim: '#2E2A66',
+    // Raised from #2E2A66 (1.56:1 on ink, lost to H.264) so the continent survives compression.
+    dotDim: '#3A3580',
     slate: '#8C89A8',
     violet: tokens.violet,
     violetLight: tokens.violetLight,
+    lavender: tokens.lavender, // the crest of a heartbeat ripple through lit Rwanda (never elsewhere)
     paper: tokens.paper,
     white: tokens.white,
   }
@@ -50,6 +56,13 @@ window.SC_SHARED = (() => {
     shuttle: ease.cubicBezier(0.37, 0, 0.63, 1),
     thud: ease.spring({ stiffness: 600, damping: 40, mass: 1, duration: 0.3 }),
     snapBack: ease.spring({ stiffness: 484, damping: 13.2, mass: 1, duration: 0.8 }),
+    // THE SNAP: omega 27.6, zeta 0.317 (35% overshoot). The far end is home at 6.573, peaks 35%
+    // past Kigali at 6.618, recrosses at 6.693, undershoots −12% at 6.742: the whole whip and its
+    // big overshoot happen at Z ≈ 1.1, before the 6.75 crash zoom.
+    snap: ease.spring({ stiffness: 762, damping: 17.5, mass: 1, duration: 0.8 }),
+    // Crash zoom on a log scale: moving within 2 frames of the 6.75 half-beat, fastest through
+    // Z 2–8 (the continent rushing past, ~1.4× per frame), then a long decelerating landing.
+    crash: ease.cubicBezier(0.35, 0, 0.12, 1),
   }
   const smoothstep = (x) => {
     const k = clamp(x)
@@ -106,19 +119,120 @@ window.SC_SHARED = (() => {
   }
 
   // ------------------------------------------------------------------------------------------
-  // s02 route dynamics: the 5.25 pluck and the 5.50–6.50 tremble, displacement along n̂.
-  // Both freeze to exactly 0 at 6.50 (the pluck is multiplied by the same 6.40–6.50 freeze as
-  // the tremble; its residual there is < 0.4 px) so the handoff is lanes(C) to the pixel.
+  // THE TIMELINE of the tension → snap → crash-zoom → lock sequence. One table, read by both
+  // scenes (and quoted in the sound-design notes), so nothing drifts between s02 and s03.
   // ------------------------------------------------------------------------------------------
-  function routeAmplitude(t) {
-    if (t < 5.25 || t >= 6.5) return 0
-    const freeze = 1 - progress(t, 6.4, 6.5)
-    const tau = t - 5.25
-    let amplitude = 22 * Math.exp(-3.5 * tau) * Math.sin(TAU * 9 * tau)
-    if (t >= 5.5) amplitude += (1.5 + 6.5 * progress(t, 5.5, 6.4) ** 2) * SC.noise(t * 24, 7)
-    return amplitude * freeze
+  const TIME = {
+    pluck: 5.25, // the 200 ms spike: the lanes are plucked, the odometer spikes toward 200
+    pushIn: [5.0, 6.5], // camera push Z 1 → 1.08 (keeps creeping to 1.10 by 6.75)
+    pull: [5.45, 6.4], // the Cape Town end is dragged 50 px further out along the route …
+    anticipation: [6.4, 6.47], // … then yanked a last 14 px (the wind-up before release)
+    tremble: [5.5, 6.42], // standing-wave tremble, 6 → 16 Hz, amplitude ~9 → 46 px
+    freeze: [6.42, 6.48], // the tremble dies: a 1-frame held breath at full stretch
+    snap: 6.5, // RELEASE on the downbeat: the far end whips home (EASE.snap)
+    front: [6.5, 6.555], // slate → violet colour front runs out along the lanes
+    home: 6.573, // the far end first reaches Kigali (impact ring + dot-field shockwave)
+    overshoot: 6.618, // peak overshoot, 35% (~175 px) past Kigali
+    lanesOut: [6.74, 6.84], // the recoiling lanes fade into Kigali
+    crash: [6.75, 7.1], // CRASH ZOOM Z 1.10 → 20 on the half-beat
+    lodZ: 4, // fine Rwanda dots start at this zoom (then spread outward to Z ≈ 11)
+    slabLands: [7.0625, 7.09375, 7.125], // pin flam: bottom, middle, top (32nd-note grid)
+    slabSlide: 0.1,
+    lock: 7.125, // top slab locks + LED lights + odometer roll + kicker swap start
+    locks: [7.1875, 7.234, 7.281, 7.328, 7.375], // odometer cells lock
+    thud: [7.375, 7.675],
+    compare: 7.42, // "vs ~110 ms to Cape Town" rises
+    beats: [7.5, 8.0], // heartbeat rings from the LED + ripples through lit Rwanda
+    hudExit: 8.44, // HUD and pin start leaving ahead of s04's burst
+    cut: 8.495, // map, LED and pin are gone; s04 owns the world from here
   }
-  const displacement = (amplitude, s) => (amplitude === 0 ? 0 : Math.sin(Math.PI * s) * amplitude)
+
+  // ------------------------------------------------------------------------------------------
+  // Camera: push-in (s02) → crash zoom (s03) → creep to Z 21 at the cut (s04 enters at Z 21).
+  // Z scales the map about K; HUD, pin, lanes and packet are screen-space.
+  // ------------------------------------------------------------------------------------------
+  const Z_PUSH = 0.08
+  const Z_CRASH = 20
+  const Z_CUT = 21
+  function pushZ(t) {
+    if (t <= TIME.pushIn[0]) return 1
+    return 1 + Z_PUSH * Math.pow((t - TIME.pushIn[0]) / (TIME.pushIn[1] - TIME.pushIn[0]), 1.6)
+  }
+  const Z_CRASH_FROM = pushZ(TIME.crash[0]) // 1.1024
+  function zoomZ(t) {
+    if (t < TIME.crash[0]) return pushZ(t)
+    if (t < TIME.crash[1]) return Z_CRASH_FROM * Math.pow(Z_CRASH / Z_CRASH_FROM, EASE.crash(progress(t, TIME.crash[0], TIME.crash[1])))
+    return Z_CRASH + ((Z_CUT - Z_CRASH) * (Math.min(t, TIME.cut) - TIME.crash[1])) / (TIME.cut - TIME.crash[1])
+  }
+  // 1 while the crash zoom is moving the map fast (streak-phase jitter only applies then, so the
+  // 6.500 handoff and the hold stay byte-identical plain discs).
+  const crashActive = (t) => (t > TIME.crash[0] && t < TIME.crash[1] + 0.02 ? 1 : 0)
+
+  // ------------------------------------------------------------------------------------------
+  // The band under tension (s02). The Cape Town end is pulled further out along û (mostly south)
+  // while the lanes thin 2.5 → 1.2 px, and a standing wave (1–2 nodes) trembles with rising
+  // frequency. Everything freezes to exactly 0 by 6.48, so s03's first frame is fully determined.
+  // ------------------------------------------------------------------------------------------
+  const PULL_PX = 64
+  function pullAmount(t) {
+    if (t <= TIME.pull[0]) return 0
+    return 0.78 * ease.inOutQuad(progress(t, TIME.pull[0], TIME.pull[1])) + 0.22 * smoothstep(progress(t, TIME.anticipation[0], TIME.anticipation[1]))
+  }
+  // Screen position of the band's far end (and of the Cape Town node riding it) before the snap.
+  function preEnd(t) {
+    const Z = zoomZ(t)
+    const pull = PULL_PX * pullAmount(t)
+    return { x: K.x + (C.x - K.x) * Z + REST.u.x * pull, y: K.y + (C.y - K.y) * Z + REST.u.y * pull }
+  }
+  const E_RELEASE = preEnd(TIME.snap) // where the far end is let go
+  // Far end E(t): pre-snap = the dragged Cape Town end; from 6.500 it whips home to K on
+  // EASE.snap in SCREEN space (K is the zoom pivot, so the recoil never balloons with the zoom).
+  function farEnd(t) {
+    if (t < TIME.snap) return preEnd(t)
+    const k = 1 - EASE.snap(progress(t, TIME.snap, TIME.snap + 0.8))
+    return { x: K.x + (E_RELEASE.x - K.x) * k, y: K.y + (E_RELEASE.y - K.y) * k }
+  }
+  const snapE = farEnd
+  const routeAt = (t) => lanes(farEnd(t))
+  // Lane widths thin as the band stretches, and fatten again as it recoils (s03 adds to this).
+  // The thinned band also brightens a little (slate 85% → 100%) so the strain stays visible.
+  function laneWidths(t) {
+    const pull = t < TIME.snap ? pullAmount(t) : 1
+    return { out: 2.5 - 1.3 * pull, ret: 2 - 1.0 * pull, outAlpha: 0.85 + 0.15 * pull, retAlpha: 0.6 + 0.2 * pull }
+  }
+
+  // Standing-wave coefficients (px along n̂) of sin(πs), sin(2πs), sin(3πs) at time t.
+  const ZERO_WAVE = { a1: 0, a2: 0, a3: 0 }
+  function tremblePhase(t) {
+    const [start, end] = TIME.tremble
+    const span = end - start
+    const x = Math.max(0, t - start)
+    const u = Math.min(x, span) / span
+    // f = 6 + 10·u^1.3 Hz, integrated; flat 16 Hz after the ramp.
+    let cycles = 6 * x + (10 * span * Math.pow(u, 2.3)) / 2.3
+    if (x > span) cycles += 10 * (x - span)
+    return TAU * cycles
+  }
+  function routeWave(t) {
+    if (t < TIME.pluck || t >= TIME.freeze[1]) return ZERO_WAVE
+    const freeze = 1 - smoothstep(progress(t, TIME.freeze[0], TIME.freeze[1]))
+    const tau = t - TIME.pluck
+    // The pluck: one big bow (mode 1), 30 px at 9 Hz, decaying.
+    let a1 = 30 * Math.exp(-3.5 * tau) * Math.sin(TAU * 9 * tau)
+    let a2 = 0
+    let a3 = 0
+    if (t > TIME.tremble[0]) {
+      const grow = smoothstep(progress(t, TIME.tremble[0], TIME.tremble[0] + 0.12))
+      const A = 46 * (0.2 + 0.8 * Math.pow(progress(t, TIME.tremble[0], 6.38), 1.4)) * grow
+      const phase = tremblePhase(t)
+      a2 = 0.85 * A * Math.sin(phase) // one node at mid-route
+      a3 = 0.5 * A * smoothstep(progress(t, 5.9, 6.3)) * Math.sin(1.5 * phase + 1.1) // two nodes, late
+      a1 += 0.25 * A * SC.noise(t * 22, 7)
+    }
+    return { a1: a1 * freeze, a2: a2 * freeze, a3: a3 * freeze }
+  }
+  const waveOffset = (wave, s) =>
+    wave === ZERO_WAVE ? 0 : wave.a1 * Math.sin(Math.PI * s) + wave.a2 * Math.sin(TAU * s) + wave.a3 * Math.sin(3 * Math.PI * s)
 
   // ------------------------------------------------------------------------------------------
   // Packet timeline (s02 legs + s03 snap ride), one function of t for both scenes so the
@@ -153,36 +267,31 @@ window.SC_SHARED = (() => {
     }
     return 1
   }
-  // Far end of the route during THE SNAP: E(t) = C + (K − C)·snapBack(progress(t, 6.5, 7.3)).
-  function snapE(t) {
-    const amount = t <= 6.5 ? 0 : EASE.snapBack(progress(t, 6.5, 7.3))
-    return { x: C.x + (K.x - C.x) * amount, y: C.y + (K.y - C.y) * amount }
-  }
+  // s03: the packet rides the out-lane far end through the whip, is drawn into Kigali over
+  // 6.70–6.80 and sits in the LED hole until the LED lights (TIME.lock).
+  const PACKET_HOME = [6.7, 6.8]
   function packetPos(t) {
-    if (t < 6.5) {
+    if (t < TIME.snap) {
+      const route = routeAt(t)
       const s = packetS(t)
-      const point = quadratic(REST.centre, s)
-      const offset = LANE_OFFSET * laneSide(t) + displacement(routeAmplitude(t), s)
-      return { x: point.x + REST.n.x * offset, y: point.y + REST.n.y * offset }
+      const point = quadratic(route.centre, s)
+      const offset = LANE_OFFSET * laneSide(t) + waveOffset(routeWave(t), s)
+      return { x: point.x + route.n.x * offset, y: point.y + route.n.y * offset }
     }
-    // s03: rides the out-lane far end A2(E(t)); from 6.85 it is drawn into Kigali.
-    const far = lanes(snapE(t)).out[2]
-    const pull = smoothstep(progress(t, 6.85, 7.0))
+    const far = routeAt(t).out[2]
+    const pull = smoothstep(progress(t, PACKET_HOME[0], PACKET_HOME[1]))
     return { x: lerp(far.x, K.x, pull), y: lerp(far.y, K.y, pull) }
   }
-  // Scale: emerges from the Kigali dot 4.00–4.06, absorbed into the LED at 7.000.
-  const packetScale = (t) => (t < 4.0 || t >= 7.0 ? 0 : tween(t, 4.0, 4.06, 0, 1, EASE.reveal))
-  // Paper, turning violetLight as the s03 colour front passes it (6.58, two frames).
-  const packetColor = (t) => mix(COLOR.paper, COLOR.violetLight, progress(t, 6.58, 6.58 + 2 / 60))
-
-  // ------------------------------------------------------------------------------------------
-  // Camera for s03: crash zoom (outExpo on log scale) then a slow creep. Z = 1 before 6.5.
-  // ------------------------------------------------------------------------------------------
-  function zoomZ(t) {
-    if (t <= 6.5) return 1
-    if (t < 7.1) return Math.pow(20, ease.outExpo(progress(t, 6.5, 7.1)))
-    return 20 + (Math.min(t, 8.5) - 7.1) / 1.4
+  // Scale: emerges from the Kigali dot 4.00–4.06; shrinks to the LED's size as the bottom slab
+  // lands; replaced by the LED disc at TIME.lock.
+  function packetScale(t) {
+    if (t < 4.0 || t >= TIME.lock) return 0
+    if (t < TIME.slabLands[0]) return tween(t, 4.0, 4.06, 0, 1, EASE.reveal)
+    return tween(t, TIME.slabLands[0], TIME.lock, 1, 0.5, EASE.carry)
   }
+  // Paper, turning violetLight as the s03 colour front passes the far end (it has already left
+  // Cape Town by then: E is ~45% of the way home).
+  const packetColor = (t) => mix(COLOR.paper, COLOR.violetLight, progress(t, TIME.front[1] - 0.025, TIME.front[1]))
 
   // ------------------------------------------------------------------------------------------
   // dot_field: api.africaDots(1) — 2,553 dots, all of them. Cached offsets from K at Z = 1.
@@ -379,15 +488,15 @@ window.SC_SHARED = (() => {
     context.drawImage(sprite, x - radius, y - radius, radius * 2, radius * 2)
     context.globalAlpha = 1
   }
-  // A lane as a 48-point polyline from s0 to s1, displaced along n̂ by sin(π·s)·amplitude.
+  // A lane as a 48-point polyline from s0 to s1, displaced along n̂ by the standing wave.
   const LANE_SAMPLES = 48
-  function laneSamples(route, which, s0, s1, amplitude = 0) {
+  function laneSamples(route, which, s0, s1, wave = ZERO_WAVE) {
     const P = which === 'out' ? route.out : route.ret
     const points = new Float64Array(LANE_SAMPLES * 2)
     for (let index = 0; index < LANE_SAMPLES; index++) {
       const s = s0 + ((s1 - s0) * index) / (LANE_SAMPLES - 1)
       const point = quadratic(P, s)
-      const offset = displacement(amplitude, s)
+      const offset = waveOffset(wave, s)
       points[index * 2] = point.x + route.n.x * offset
       points[index * 2 + 1] = point.y + route.n.y * offset
     }
@@ -441,6 +550,23 @@ window.SC_SHARED = (() => {
     if (scale <= 0) return
     strokeRing(context, COLOR.slate, x, y, 9 * scale, 2.5 * scale, 1)
   }
+  // On-map label "Cape Town": JetBrains Mono 500 40 px, slate, right-aligned 24 px left of the
+  // node and centred on it, so it rides the dragged node. Types on with the node pop (4.50).
+  const CAPE_LABEL = 'Cape Town'
+  const LABEL_FONT = "500 40px 'JetBrains Mono', monospace"
+  const labelTyped = (t) => (t < 4.5 ? 0 : Math.min(CAPE_LABEL.length, Math.floor((t - 4.5) / 0.012 + 1e-6) + 1))
+  function drawCapeTownLabel(context, node, typed, alpha = 1, dy = 0) {
+    if (typed <= 0 || alpha <= 0) return
+    context.globalAlpha = alpha
+    context.fillStyle = COLOR.slate
+    context.font = LABEL_FONT
+    context.textAlign = 'left'
+    context.textBaseline = 'alphabetic'
+    // Mono advance is 0.6 em = 24 px: lay the typed prefix out from the full label's left edge.
+    const left = node.x - 24 - CAPE_LABEL.length * 24
+    context.fillText(CAPE_LABEL.slice(0, typed), left, node.y + 14 + dy)
+    context.globalAlpha = 1
+  }
 
   // ------------------------------------------------------------------------------------------
   // mask_rise: translateY from depth → 0 (reveal) / 0 → depth (exit) inside a clip whose bottom
@@ -489,7 +615,9 @@ window.SC_SHARED = (() => {
   const KICKER_FAR = 'Cape Town · nearest hyperscaler region'
   const KICKER_LOCAL = 'Strettch Cloud · Kigali-1'
 
-  function buildHud(root, { id, strips, dimFirst = [], localKicker = false }) {
+  // The far number, kept in slate beside the local one after the roll-down (never violet).
+  const COMPARE_LINE = 'vs ~110 ms to Cape Town'
+  function buildHud(root, { id, strips, dimFirst = [], localKicker = false, compare = false }) {
     const s = SC.svg
     const hud = s('svg', { width: 1920, height: 1080, viewBox: '0 0 1920 1080' }, root)
     hud.style.cssText = 'position:absolute;left:0;top:0;overflow:hidden'
@@ -555,7 +683,18 @@ window.SC_SHARED = (() => {
       'font-family': MONO, 'font-size': peaks.size, 'font-weight': 600,
     })
 
-    return { svg: hud, kickerA, kickerAText, kickerB, numberRise, numberGroup, cells, edgeRect: edgeClip.rect, unitRise, unitText, perRise, peaksRise }
+    // s03: "vs ~110 ms to Cape Town" in the peaks slot (same font, same mask edge 676).
+    let compareRise = null
+    if (compare) {
+      const compareClip = clip('compare', 96, peaks.edge - 56, 1728, 56)
+      compareRise = s('g', {}, s('g', { 'clip-path': compareClip.url }, hud))
+      text(compareRise, COMPARE_LINE, {
+        x: peaks.x, y: peaks.baseline, fill: COLOR.slate,
+        'font-family': MONO, 'font-size': peaks.size, 'font-weight': 600,
+      })
+    }
+
+    return { svg: hud, kickerA, kickerAText, kickerB, numberRise, numberGroup, cells, edgeRect: edgeClip.rect, unitRise, unitText, perRise, peaksRise, compareRise }
   }
   // Group transform for the number: scale (sx, sy) about (x 131, baseline 544.4).
   function numberTransform(sx, sy) {
@@ -569,11 +708,12 @@ window.SC_SHARED = (() => {
     COLOR, EASE, TAU, K, C, KIGALI, CAPE_TOWN, PX_PER_DEGREE, LANE_OFFSET, REST, LANE_STYLE, ODOMETER, HUD, DIGIT_STRIP,
     KICKER_FAR, KICKER_LOCAL, PACKET_RADIUS,
     rgba, mix, smoothstep,
-    projectToScreen, relX, relY, lanes, quadratic, routeAmplitude, displacement,
-    packetS, laneSide, packetPos, packetScale, packetColor, snapE, zoomZ,
+    TIME, Z_CRASH, Z_CUT, E_RELEASE, PULL_PX,
+    projectToScreen, relX, relY, lanes, quadratic, routeWave, waveOffset, pullAmount, preEnd, farEnd, routeAt, laneWidths,
+    packetS, laneSide, packetPos, packetScale, packetColor, snapE, zoomZ, crashActive,
     dotField, rwandaFineDots, haloSprite,
     createMapCanvas, resetContext, fillCapsules, paintDots, fillDisc, strokeRing, strokeCapsules, drawSprite,
-    laneSamples, strokeLane, drawPacket, drawKigali, drawCapeTownNode,
+    laneSamples, strokeLane, drawPacket, drawKigali, drawCapeTownNode, drawCapeTownLabel, labelTyped,
     rise, sink, countOffsets, slotStrip, slotOffset,
     buildHud, numberTransform, translateY,
   }
