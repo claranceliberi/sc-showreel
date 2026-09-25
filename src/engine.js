@@ -437,7 +437,10 @@ window.SC = (() => {
     const shakeX = noise(time * 38, 11) * 14 * envelope
     const shakeY = noise(time * 41, 23) * 10 * envelope
     const shakeRotate = noise(time * 29, 37) * 0.35 * envelope
-    setStyle(stage, { transform: `translate(${round(shakeX, 2)}px, ${round(shakeY, 2)}px) rotate(${round(shakeRotate, 3)}deg)` })
+    // Overscan while shaking so the displaced stage never exposes the frame edge (a flickering
+    // black border on full-bleed violet): 3% covers 14 px + 0.35° at full intensity.
+    const overscan = 1 + 0.03 * envelope
+    setStyle(stage, { transform: `translate(${round(shakeX, 2)}px, ${round(shakeY, 2)}px) rotate(${round(shakeRotate, 3)}deg) scale(${round(overscan, 4)})` })
     // Chromatic aberration: split R and B channels horizontally while a hit is fresh.
     const aberrationEnvelope = hitEnvelope(time, 'aberration')
     const aberration = aberrationEnvelope > 0.03 ? aberrationEnvelope * 9 : 0

@@ -136,7 +136,7 @@ riser(effects, 5.5, 6.5, { intensity: 0.6, fromFrequency: 200, toFrequency: 9000
 chirp(effects, 5.5, { from: 600, to: 1800, length: 1.0, intensity: 0.05 }) // string-tension whine
 
 // --- 6.50–8.50  s03: THE SNAP and the release groove --------------------------------------------
-subHit(effects, 6.5, { intensity: 1.2, length: 1.2, startFrequency: 160, endFrequency: 38 })
+subHit(effects, 6.5, { intensity: 1.45, length: 1.4, startFrequency: 170, endFrequency: 34 }) // the film's biggest low end
 subHit(effects, 6.59, { intensity: 0.35, length: 0.6, startFrequency: 160, endFrequency: 38 }) // slapback
 snap(effects, 6.5, { intensity: 0.45 })
 whoosh(effects, 6.62, { duration: 0.6, intensity: 0.5, panFrom: -0.9, panTo: 0.9, brightness: 1.5 }) // crash-zoom
@@ -152,6 +152,9 @@ const GROOVE_START = 7.0
 const GROOVE_END = 12.5
 pad(music, 7.0, 3.0, [48, 55, 62, 64], { intensity: 0.2, attack: 0.25, release: 0.15, cutoffFrom: 900, cutoffTo: 2400 }) // C major add9
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT) {
+  // The 8.5 cut has its own sub whomp; a groove kick on top beats against it (a doubled
+  // "whomp-WHOMP"), so the groove rests on that beat.
+  if (Math.abs(time - 8.5) < 1e-6) continue
   subHit(drums, time, { intensity: 0.45, length: 0.35, startFrequency: 120, endFrequency: 46 })
 }
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT / 2) {
@@ -163,7 +166,7 @@ for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += SIXTEENTH) {
 }
 
 // --- 8.50–10.00  s04: in-country -----------------------------------------------------------------
-subHit(effects, 8.5, { intensity: 0.7, length: 0.8, startFrequency: 110, endFrequency: 40 }) // whomp
+subHit(effects, 8.5, { intensity: 0.5, length: 0.8, startFrequency: 110, endFrequency: 40 }) // whomp
 // The four outer glyphs hit Rwanda's border within 5 ms (8.621–8.626): a tight flam, not a roll.
 for (let bump = 0; bump < 4; bump++) {
   tok(effects, 8.621 + bump * 0.0017, { pitch: 210 - bump * 18, intensity: 0.22, decay: 0.03, pan: [-0.5, 0.45, -0.2, 0.3][bump] })
@@ -179,7 +182,7 @@ subHit(effects, 10.5, { intensity: 0.4, length: 0.5 })
   tok(effects, time, { pitch: 700 * Math.pow(2, -index / 12), intensity: 0.3, decay: 0.012 }) // drum locks 3-9-9-9
   tick(effects, time, { pitch: 2600 * Math.pow(2, -index / 12), intensity: 0.2, seed: 300 + index })
 })
-;[11.0625, 11.125, 11.1875].forEach((time) => subPulse(effects, time, { intensity: 0.55 })) // Mobile Money buzz
+;[11.0625, 11.125, 11.1875].forEach((time) => subPulse(effects, time, { intensity: 0.25 })) // Mobile Money buzz
 tok(effects, 11.25, { pitch: 520, intensity: 0.4, decay: 0.015 }) // period pops
 for (let time = 11.5; time < 12.5 - 0.01;) { // snare roll 16ths → 32nds
   const progress = (time - 11.5) / 1.0
@@ -240,7 +243,7 @@ for (let index = 0; index < master.length; index++) {
 
 // Loudness: push into the limiter so the bed sits up with the hits (~−14 LUFS integrated),
 // then soft-clip the last fraction of a dB and leave true-peak headroom for the AAC encode.
-const MASTER_DRIVE = Number(process.env.MASTER_DRIVE || 2.35)
+const MASTER_DRIVE = Number(process.env.MASTER_DRIVE || 2.15)
 scaleBus(master, MASTER_DRIVE * 0.9 / peak(master))
 limit(master, { ceiling: 0.95, attackSeconds: 0.002, releaseSeconds: 0.08 })
 softClip(master, 0.9)

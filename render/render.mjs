@@ -2,7 +2,7 @@
 //
 //   node render/render.mjs still --times 1.2,3.4 [--solo s02-map] [--outdir out/stills]
 //   node render/render.mjs sheet --from 0 --to 15 --count 30 [--columns 6] [--solo id] [--out out/sheet.png]
-//   node render/render.mjs video [--from 0] [--to 15] [--subframes 4] [--shutter 0.5] [--scale 1]
+//   node render/render.mjs video [--from 0] [--to 15] [--subframes 8] [--shutter 0.5] [--scale 1]
 //                               [--workers 3] [--format jpeg|png] [--crf 17] [--no-windows 1]
 //                               [--audio out/audio.wav] [--out out/showreel.mp4]
 //
@@ -151,7 +151,7 @@ function planSegments(firstFrame, lastFrame, defaultSubframes, windows, pieceWor
 async function renderVideo(browser, port, options) {
   const from = Number(options.from ?? 0)
   const to = Number(options.to ?? DURATION)
-  const defaultSubframes = Number(options.subframes ?? 4)
+  const defaultSubframes = Number(options.subframes ?? 8)
   const shutter = Number(options.shutter ?? 0.5)
   const scale = Number(options.scale ?? 1)
   const workers = Number(options.workers ?? 3)
