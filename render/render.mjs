@@ -181,6 +181,9 @@ async function renderVideo(browser, port, options) {
     : []
   const outputArgs = audioArgs.length ? ['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '256k', '-shortest'] : []
   await runFfmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, ...audioArgs, ...outputArgs,
+    // Matroska chunks store 1 ms timestamps, so 1/60 s frames drift and a frame at a chunk seam
+    // could be dropped when resampling to 60 fps. Re-stamp every frame from its index instead.
+    '-vf', `setpts=N/(${FPS}*TB)`,
     '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-crf', options.crf || '17', '-preset', options.preset || 'slow',
     '-r', String(FPS), '-movflags', '+faststart', out]).done
   await rm(scratch, { recursive: true, force: true })
