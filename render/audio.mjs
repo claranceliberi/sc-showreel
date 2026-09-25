@@ -87,7 +87,8 @@ whoosh(effects, 0.15, { duration: 0.25, intensity: 0.25, panFrom: 0, panTo: 0, b
 tickTrain(effects, 0.2, 7, 0.02, { from: 2400, to: 3800, intensity: 0.12, jitterSeed: 10 }) // "stretch" rises
 subHit(effects, 0.5, { intensity: 0.8 }) // weight slam
 tok(effects, 0.5, { pitch: 150, intensity: 0.35, decay: 0.05 })
-riser(effects, 1.0, 1.5, { intensity: 0.45, fromFrequency: 400, toFrequency: 5000, seed: 21 }) // rubber-band creak
+riser(effects, 0.75, 1.5, { intensity: 0.45, fromFrequency: 300, toFrequency: 5000, seed: 21 }) // rubber-band creak (pull 0.75)
+pluck(effects, 1.4, { frequency: 147, duration: 0.25, intensity: 0.12, brightness: 0.7, seed: 19 }) // band goes taut
 whoosh(effects, 1.45, { duration: 0.25, intensity: 0.35, panFrom: 0, panTo: 0, brightness: 1.3 }) // the falling t
 subHit(effects, 1.5, { intensity: 1.0 })
 snare(effects, 1.5, { intensity: 0.45, tail: 0.1 })
@@ -109,9 +110,10 @@ for (let time = 2.5; time < TENSION_END - 0.01; time += SIXTEENTH) {
 for (let time = 2.5; time < TENSION_END - 0.01; time += 2 * BEAT) subHit(drums, time, { intensity: 0.35, length: 0.35, startFrequency: 110, endFrequency: 48 })
 
 whoosh(effects, 2.8, { duration: 0.12, intensity: 0.15, panFrom: 0.3, panTo: -0.2, brightness: 1.2 }) // annotation retracts
-whoosh(effects, 3.2, { duration: 0.35, intensity: 0.35, panFrom: -0.8, panTo: 0.8 }) // camera pull-back
-tickTrain(effects, 3.0, 8, 0.0375, { from: 2200, to: 1300, intensity: 0.1, pan: -0.2, jitterSeed: 40 }) // "strettch" sinks
-tickTrain(effects, 3.1, 12, 0.01, { from: 1600, to: 3400, intensity: 0.09, pan: 0.2, jitterSeed: 60 }) // "Africa-first" rises (domino 3.10–3.21)
+whoosh(effects, 2.745, { duration: 0.18, intensity: 0.12, panFrom: 0.3, panTo: 0, brightness: 0.5 }) // anticipation intake, stops dead 2.76
+whoosh(effects, 2.934, { duration: 0.29, intensity: 0.35, panFrom: -0.8, panTo: 0.8 }) // camera pull-back 2.76–3.05
+tok(effects, 3.02, { pitch: 150, intensity: 0.3, decay: 0.03 }) // "strettch" drops out as one word
+tickTrain(effects, 3.095, 12, 0.008, { from: 1600, to: 3400, intensity: 0.09, pan: 0.2, jitterSeed: 60 }) // "Africa-first" rises
 tok(effects, 3.25, { pitch: 520, intensity: 0.45, decay: 0.015 }) // the period pops
 // Granular shimmer as the continent assembles outward from Kigali.
 whoosh(effects, 3.75, { duration: 0.8, intensity: 0.2, panFrom: -0.4, panTo: 0.4, brightness: 2 })
@@ -124,6 +126,7 @@ for (const time of [3.5, 4.0, 4.5, 5.0, 5.5, 6.0]) { // Kigali heartbeat
   addVoice(effects, time, 0.12, (index) => sine(880) * expDecay(index / SAMPLE_RATE, 0.025), { gain: 0.1, pan: 0.35 })
 }
 whoosh(effects, 4.3, { duration: 0.5, intensity: 0.3, panFrom: 0.1, panTo: 0.6, brightness: 0.8 }) // packet launch
+whoosh(effects, 4.476, { duration: 0.16, intensity: 0.12, panFrom: -0.6, panTo: 0.5, brightness: 1.4 }) // hairline reels into Kigali 4.38–4.54
 tok(effects, 4.5, { pitch: 900, intensity: 0.3, decay: 0.01, pan: 0.4 }) // packet hits Cape Town
 tickTrain(effects, 4.5, 19, 0.01, { from: 3000, to: 3000, intensity: 0.05, pan: -0.3, jitterSeed: 80 }) // kicker types on
 tickTrain(effects, 4.5625, 8, THIRTY_SECOND, { from: 1800, to: 2400, intensity: 0.14, pan: -0.25, jitterSeed: 100 }) // odometer

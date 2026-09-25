@@ -3,25 +3,64 @@
 // NAME, then WHAT IT IS. The dictionary word "stretch" (Inter var) rises, slams to Black on the
 // downbeat and is pulled until it tears. The extra violet t (the real wordmark letter 5) drops
 // into the gap, and on impact the word re-sets as the REAL strettch wordmark, recoiling shut.
-// "the extra push." annotates it, "cloud" bounces up, and on a camera pull-back "strettch"
-// swaps out for "Africa-first" so the line reads "Africa-first cloud." — whose period (drawn
-// by s02 from 3.250) becomes Kigali. The line then sinks and the hairline reels into Kigali.
+// "the extra push." annotates it, "cloud" bounces up, the camera leans in and pulls back, then
+// "strettch" drops out and "Africa-first" rises in its place so the line reads
+// "Africa-first cloud." — whose period (drawn by s02 from 3.250) becomes Kigali. The line then
+// sinks and the hairline reels into Kigali.
 //
 // Layers (bottom → top):
-//   hairline  screen-space SVG polyline (never scaled by the camera)
-//   plane     1920×1080 div, transform-origin 0 0; its transform animates only 3.00–3.25
+//   hairline  screen-space SVG polyline (stroke never scaled by the camera; ends and y follow it)
+//   plane     1920×1080 div, transform-origin 0 0, driven by camera(t)
 //     ├ Inter "stretch" glyphs          (clipped to plane y < 606)
 //     ├ createLogo wordmark + extrusion (clipped to plane y < 606)
 //     ├ annotation: leader + serif line
 //     └ Inter 800 "Africa-first" glyphs (clipped to plane y < 606)
 //
 // Ownership: s01 never draws the period / Kigali dot (s02 owns it from 3.250).
-// The storyboard exits "Africa-first cloud" at 4.50, but with the slow-start swift ease it stayed
-// printed over s02's rising "~110" odometer (same baseline) until ~4.70. Exiting from 4.38 clears
-// the baseline by ~4.57 and still leaves the line >1 s of settled reading time (3.30–4.38).
+//
+// Revision 2 event times (sound sync):
+//   0.750        the pull starts (strain: thinning, lag, growing tremble); taut at 1.400 (twang)
+//   1.250–1.500  the extra t falls; impact at 1.500 (unchanged, locked to the audio hit + shake)
+//   1.95–2.58    hold drift: camera pushes in 1.35 % about (958.8, 396.1), ≤ 0.4 px/frame
+//   2.58–2.76    anticipation: the push leans in a further 1.3 %, then stops dead at 2.76
+//   2.76–3.05    camera pull-back to u = 8 (quintic in-out, peak 25 px/frame at 2.905)
+//   3.000–3.104  "strettch" drops out as one word (inCubic, 0.002 s L→R stagger)
+//   3.095–3.343  "Africa-first" rises, glyph i from 3.095 + 0.008·i (reads settled by ~3.26)
+//   3.05–4.60    hold drift: the line pushes in 1 % about Kigali (the period stays attached)
+//   4.380–4.540  the line sinks; the hairline reels into Kigali and is gone from 4.540
 const EXIT_START = 4.38
 const EXIT_STAGGER = 0.003
 const EXIT_DURATION = 0.14
+const HAIRLINE_REEL = 0.16 // hairline gone at EXIT_START + 0.16 = 4.540, before s02's odometer rises (4.55)
+
+// The swap: strettch leaves as a whole word before any "Africa-first" glyph rises over it.
+const SWAP_OUT = 3.0
+const SWAP_OUT_STAGGER = 0.002
+const SWAP_OUT_DURATION = 0.09
+const SWAP_IN = 3.095
+const SWAP_IN_STAGGER = 0.008
+const SWAP_IN_DURATION = 0.16
+
+// The pull.
+const PULL_START = 0.75
+const PULL_END = 1.4
+
+// Camera. Zoom about P for the push / lean / pull-back, then a slow push about K (Kigali, the
+// period s02 draws) so the period never detaches from "cloud".
+const CAMERA_PIVOT = { x: 958.8, y: 396.1 }
+const KIGALI = { x: 1560, y: 530 }
+const PULLED_SCALE = 8 / 11
+const LEAN_PEAK = 2.76
+const PULL_BACK_END = 3.05
+const smootherstep = (u) => u * u * u * (u * (u * 6 - 15) + 10)
+// [time, scale, slope (1/s)] cubic-Hermite keys (C1), the last segment eased with smootherstep.
+const CAMERA_KEYS = [
+  [1.95, 1, 0],
+  [2.58, 1.0135, 0.03], // hold drift (edges ≤ 0.4 px/frame)
+  [LEAN_PEAK, 1.0265, 0], // anticipation: lean in, stop
+  [PULL_BACK_END, PULLED_SCALE, 0, smootherstep], // pull back to u = 8
+]
+const SECOND_DRIFT = 0.01 // ≤ 0.25 px/frame; "Africa-first" ends ~13 px left of s02's x-131 HUD grid
 
 SC.scene({
   id: 's01-stretch',
@@ -131,7 +170,7 @@ SC.scene({
     note.textContent = 'the extra push.'
 
     // (e) "Africa-first", Inter 800 at 220.2 px, placed by cumulative (kerned) canvas advances
-    // with the right edge of the word at plane x 1057.57 (the h's right edge) → left ≈ −179.0.
+    // with the right edge of the word at plane x 1057.57 (the h's right edge) → left ≈ −177.4.
     const AFRICA = 'Africa-first'
     const AFRICA_SIZE = 220.2
     const measure = document.createElement('canvas').getContext('2d')
@@ -148,18 +187,20 @@ SC.scene({
       const right = africaLeft + measure.measureText(AFRICA.slice(0, index + 1)).width
       return { node, x, right }
     })
-    // ANCHOR SWAP chase (deviation, see report): an incoming glyph never rises over an outgoing
-    // strettch letter that is still standing. Glyph i starts at max(3.100 + 0.010·i, the moment
-    // every strettch letter under it is 70% through its sink, i.e. already falling fast), so the
-    // swap reads as one clean L→R domino wave behind the camera pull-back instead of a double
-    // exposure. The last glyph starts at 3.210 and is settled (< 2 px/frame) by 3.300.
+    // WHOLE-WORD SWAP guard: an incoming glyph never starts rising until every strettch letter
+    // under it (± 8 px of ink overhang) has fully sunk through the mask, plus a quarter-frame for
+    // the renderer's shutter. With the timings above the guard never binds (the first glyph that
+    // overlaps strettch, the i, starts at 3.119; the s under it is gone at 3.090), but it keeps the
+    // swap clean if anyone retimes it.
     const outgoing = logo.letters.slice(0, 8).map((letter, index) => ({
-      x0: letter.box.x0 * U + LOGO_LEFT, x1: letter.box.x1 * U + LOGO_LEFT, clear: 3.0 + 0.015 * index + 0.7 * 0.15,
+      x0: letter.box.x0 * U + LOGO_LEFT - 8,
+      x1: letter.box.x1 * U + LOGO_LEFT + 8,
+      clear: SWAP_OUT + SWAP_OUT_STAGGER * index + SWAP_OUT_DURATION + 0.005,
     }))
     africaGlyphs.forEach((glyph, index) => {
-      glyph.riseStart = 3.1 + 0.01 * index
+      glyph.riseStart = SWAP_IN + SWAP_IN_STAGGER * index
       for (const letter of outgoing) {
-        if (Math.min(glyph.right, letter.x1) - Math.max(glyph.x, letter.x0) > 2) glyph.riseStart = Math.max(glyph.riseStart, letter.clear)
+        if (Math.min(glyph.right, letter.x1) - Math.max(glyph.x, letter.x0) > 0) glyph.riseStart = Math.max(glyph.riseStart, letter.clear)
       }
     })
 
@@ -176,12 +217,12 @@ SC.scene({
 
   render(t, s, api) {
     const { ease, tween, progress, lerp, noise, setStyle, setAttrs, round } = api
-    const { snappy, swift } = ease
+    const { snappy } = ease
     const { U } = s
     const BASELINE = 600
     const DEPTH = 175 // rise / sink depth, plane px
     const rise = (start, duration) => tween(t, start, start + duration, DEPTH, 0, snappy)
-    const sink = (start, duration) => tween(t, start, start + duration, 0, DEPTH, swift)
+    const sink = (start, duration, easing = ease.swift) => tween(t, start, start + duration, 0, DEPTH, easing)
     const show = (node, visible) => setAttrs(node, { display: visible ? 'inline' : 'none' })
     const r3 = (value) => round(value, 3)
     // The 1.50 impact is a hard state change (Inter → wordmark, squash, extrusion). It flips a
@@ -192,27 +233,64 @@ SC.scene({
     const SQUASH_END = 1.5 + 2 / 60 // squash holds frames 1.500 and 1.517
     const EXTRUSION_END = 1.5 + 1.7 / 60 // the 2-frame extrusion (frames 1.500, 1.517)
 
-    // ---- Camera pull-back 3.00–3.25: scales about (958.8, 396.1) down to u = 8 ----------------
-    const camera = snappy(progress(t, 3.0, 3.25))
+    // ---- Camera --------------------------------------------------------------------------------
+    // Stage 1 (≤ 3.05): scale about P through CAMERA_KEYS — identity until 1.95, a slow push-in
+    // through the "strettch cloud" hold, a small lean-in (anticipation) that stops at 2.76, then
+    // a quintic pull-back to u = 8 landing at 3.05 (the storyboard's end framing, exactly).
+    // Stage 2 (≥ 3.05): a 1 % push about Kigali while "Africa-first cloud." reads, so the frame
+    // never freezes and the period (s02's Kigali dot, at the pivot) stays glued to the line.
+    const camera = (() => {
+      let scale = CAMERA_KEYS[0][1]
+      if (t >= CAMERA_KEYS[CAMERA_KEYS.length - 1][0]) scale = CAMERA_KEYS[CAMERA_KEYS.length - 1][1]
+      else {
+        for (let index = 1; index < CAMERA_KEYS.length; index++) {
+          const [t1, v1, m1, easing] = CAMERA_KEYS[index]
+          if (t > t1) continue
+          const [t0, v0, m0] = CAMERA_KEYS[index - 1]
+          if (t <= t0) break
+          const h = t1 - t0
+          const u = (t - t0) / h
+          if (easing) scale = lerp(v0, v1, easing(u))
+          else {
+            const u2 = u * u
+            const u3 = u2 * u
+            scale = (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * h * m0 + (3 * u2 - 2 * u3) * v1 + (u3 - u2) * h * m1
+          }
+          break
+        }
+      }
+      const push = 1 + SECOND_DRIFT * ease.smooth(progress(t, PULL_BACK_END, 4.6))
+      const tx = CAMERA_PIVOT.x * (1 - scale)
+      const ty = CAMERA_PIVOT.y * (1 - scale)
+      return {
+        scale: push * scale,
+        tx: KIGALI.x + push * (tx - KIGALI.x),
+        ty: KIGALI.y + push * (ty - KIGALI.y),
+        // 0 → 1 across the pull-back only (drives the hairline's retracting ends).
+        pull: smootherstep(progress(t, LEAN_PEAK, PULL_BACK_END)),
+      }
+    })()
     setStyle(s.plane, {
-      transform: t < 3.0 ? 'none' : `translate(${r3(261.5 * camera)}px, ${r3(108.04 * camera)}px) scale(${round(1 - (3 / 11) * camera, 5)})`,
+      transform: t < CAMERA_KEYS[0][0] ? 'none' : `translate(${r3(camera.tx)}px, ${r3(camera.ty)}px) scale(${round(camera.scale, 6)})`,
     })
 
     // ---- Hairline ------------------------------------------------------------------------------
+    // Its ends are plane points (they retract from x 96 / 1824 to −206.6 / 1765.6 during the
+    // pull-back, i.e. screen 111.2 / 1545.6 at u = 8, the Kigali dot's left edge) mapped through
+    // the camera; y is the camera-mapped baseline so the rule always sits exactly under the type.
     {
-      let left = 96
-      let right = 1824
+      let planeLeft = lerp(96, -206.6, camera.pull)
+      let planeRight = lerp(1824, 1765.6, camera.pull)
       if (t < 0.2) {
         const grow = snappy(progress(t, 0, 0.2))
-        left = 960 - 864 * grow
-        right = 960 + 864 * grow
+        planeLeft = 960 - 864 * grow
+        planeRight = 960 + 864 * grow
       }
-      if (t >= 3.0) {
-        left = lerp(96, 111.2, camera)
-        right = lerp(1824, 1545.6, camera)
-      }
-      if (t >= 4.5) left = lerp(111.2, 1545.6, ease.inCubic(progress(t, 4.5, 4.7)))
-      const y = 600 - 55.6 * camera
+      let left = camera.tx + camera.scale * planeLeft
+      const right = camera.tx + camera.scale * planeRight
+      const y = camera.ty + camera.scale * BASELINE
+      // Reels into Kigali as the line sinks; gone before s02's odometer rises under it (4.55).
+      if (t >= EXIT_START) left = lerp(left, right, ease.inCubic(progress(t, EXIT_START, EXIT_START + HAIRLINE_REEL)))
       let points
       if (t >= 1.5 && t < 2.2) {
         // Plucked on the impact: a decaying 7 Hz standing wave, 97-point polyline.
@@ -220,33 +298,45 @@ SC.scene({
         const amplitude = 10 * Math.exp(-6 * tau) * Math.sin(2 * Math.PI * 7 * tau)
         const list = []
         for (let index = 0; index <= 96; index++) {
-          const x = 96 + index * 18
-          list.push(`${x},${round(600 + amplitude * Math.sin((Math.PI * (x - 96)) / 1728), 2)}`)
+          const x = lerp(left, right, index / 96)
+          list.push(`${round(x, 2)},${round(y + amplitude * Math.sin((Math.PI * index) / 96), 2)}`)
         }
         points = list.join(' ')
       } else {
         points = `${r3(left)},${r3(y)} ${r3(right)},${r3(y)}`
       }
-      setAttrs(s.hairline, { points, display: t < 4.7 && right - left > 0.05 ? 'inline' : 'none' })
+      setAttrs(s.hairline, { points, display: t < EXIT_START + HAIRLINE_REEL && right - left > 0.05 ? 'inline' : 'none' })
     }
 
     // ---- (a) Inter "stretch" 0.20–1.50 ---------------------------------------------------------
+    // The pull runs 0.75–1.40: the ends lead and the inner glyphs lag (LAG), the type thins
+    // (wght 900 → 300) and stretches (scaleX, strongest either side of the tear) ahead of the
+    // travel, and a tremble grows with the tension. At 1.40 the band goes taut: the glyphs twang
+    // outward once and hold, trembling, until the 1.500 impact.
     const REST = [620, 728, 820, 935, 1045, 1156, 1293]
     const PULLED = [185, 290, 385, 505, 640, 1590, 1735]
-    const LAG = [0, 0.03, 0.06, 0.08, 0.1, 0.03, 0]
+    const LAG = [0, 0.05, 0.1, 0.13, 0.16, 0.05, 0]
+    const STRAIN = [0.85, 0.9, 1.0, 1.1, 1.3, 1.3, 1.05]
     {
       const visible = t >= 0.2 && t < IMPACT
       const slam = ease.outExpo(progress(t, 0.5, 0.68))
+      const tension = Math.pow(progress(t, 0.72, PULL_END), 1.3)
       s.stretchGlyphs.forEach((node, index) => {
         show(node, visible)
         if (!visible) return
-        const pull = ease.inCubic(progress(t, 1.0 + LAG[index], 1.4))
-        let x = lerp(REST[index], PULLED[index], pull)
-        if (t >= 1.4) x += 1.5 * noise(t * 40, index) // taut: held under tension
-        const y = BASELINE + rise(0.2 + 0.02 * index, 0.2)
-        const weight = lerp(lerp(100, 900, slam), 300, pull)
-        const scaleX = lerp(1, 1.25, pull)
-        setAttrs(node, { transform: `translate(${r3(x)} ${r3(y)}) scale(${r3(scaleX)} 1)` })
+        const amount = progress(t, PULL_START + LAG[index], PULL_END)
+        const pull = amount * amount // constant force: visible from the first frames, then gives
+        const thin = Math.pow(amount, 1.25) // the stroke thins ahead of the travel
+        let x = lerp(REST[index], PULLED[index], pull) + 2.4 * tension * noise(t * 42, index)
+        if (t >= PULL_END) {
+          const tau = t - PULL_END
+          x += Math.sign(PULLED[index] - REST[index]) * 7 * Math.exp(-tau / 0.035) * Math.sin(2 * Math.PI * 14 * tau)
+        }
+        const y = BASELINE + rise(0.2 + 0.02 * index, 0.2) + 0.8 * tension * noise(t * 37, index + 20)
+        const weight = lerp(lerp(100, 900, slam), 300, thin)
+        const scaleX = 1 + 0.25 * STRAIN[index] * thin
+        const scaleY = 1 - 0.035 * thin
+        setAttrs(node, { transform: `translate(${r3(x)} ${r3(y)}) scale(${r3(scaleX)} ${r3(scaleY)})` })
         setStyle(node, { fontWeight: String(round(weight, 1)) })
       })
     }
@@ -255,6 +345,8 @@ SC.scene({
     // Pulled centre of each strettch letter (the violet t, index 5, falls in at home instead).
     const pulledFor = (index) => (index < 5 ? PULLED[index] : PULLED[index - 1])
     const recoilAmount = s.springs.recoil(progress(t, 1.5, 1.95))
+    const swapOutStart = (index) => SWAP_OUT + SWAP_OUT_STAGGER * index
+    const swapOutEnd = (index) => swapOutStart(index) + SWAP_OUT_DURATION
     const transforms = []
     s.letters.forEach((letter, index) => {
       let visible
@@ -264,7 +356,7 @@ SC.scene({
       let scaleY = 1
       if (index === 5) {
         // THE EXTRA T: gravity drop #1, lands on the 1.50 impact.
-        visible = t >= 1.25 && t < 3.0 + 0.015 * 5 + 0.15
+        visible = t >= 1.25 && t < swapOutEnd(5)
         if (t < IMPACT) {
           const fall = progress(t, 1.25, 1.5)
           dy = tween(t, 1.25, 1.5, -640, 0, 'inQuad')
@@ -278,14 +370,15 @@ SC.scene({
           scaleY = lerp(0.72, 1, back)
           scaleX = lerp(1.28, 1, back)
         }
-        dy += sink(3.0 + 0.015 * 5, 0.15)
+        dy += sink(swapOutStart(5), SWAP_OUT_DURATION, ease.inCubic)
       } else if (index < 8) {
-        visible = t >= IMPACT && t < 3.0 + 0.015 * index + 0.15
+        visible = t >= IMPACT && t < swapOutEnd(index)
         dx = (pulledFor(index) - letter.home) * (1 - recoilAmount)
         // Impact shockwave travelling outward from the t.
         const tau = t - 1.5 - 0.025 * Math.abs(index - 5)
         if (tau >= 0 && tau <= 0.12) dy -= 14 * Math.sin((Math.PI * tau) / 0.12)
-        dy += sink(3.0 + 0.015 * index, 0.15)
+        // The whole word drops out together (inCubic: it visibly starts moving at 3.00).
+        dy += sink(swapOutStart(index), SWAP_OUT_DURATION, ease.inCubic)
       } else {
         // "cloud" bounces up (light glyphs), then sinks with "Africa-first" at EXIT_START.
         const order = 12 + (index - 8)
@@ -326,12 +419,12 @@ SC.scene({
       show(s.note, width > 0.05)
     }
 
-    // ---- (e) "Africa-first" 3.00–4.73 (rise starts: see the chase in build) --------------------
+    // ---- (e) "Africa-first" 3.09–4.73 (rise starts: see the swap guard in build) ---------------
     s.africaGlyphs.forEach(({ node, x, riseStart }, index) => {
       const visible = t >= riseStart && t < EXIT_START + EXIT_STAGGER * index + EXIT_DURATION
       show(node, visible)
       if (!visible) return
-      const y = BASELINE + rise(riseStart, 0.16) + sink(EXIT_START + EXIT_STAGGER * index, EXIT_DURATION)
+      const y = BASELINE + rise(riseStart, SWAP_IN_DURATION) + sink(EXIT_START + EXIT_STAGGER * index, EXIT_DURATION)
       setAttrs(node, { transform: `translate(${r3(x)} ${r3(y)})` })
     })
   },
