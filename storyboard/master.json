@@ -1,0 +1,925 @@
+{
+  "title": "One More T — Strettch Cloud, 15 s showreel (locked storyboard v1)",
+  "logline": "The word \"stretch\" is pulled until it tears; the extra violet t drops into the gap and the word becomes the real strettch cloud wordmark. Its violet period becomes Kigali, and a request stretches to the nearest hyperscaler region in Cape Town and back (~110 ms). The route trembles like a rubber band until it SNAPS home on the 6.50 downbeat: the camera crash-zooms into Rwanda, the logo slabs lock onto Kigali-1 and the same odometer rolls down to 10–30 ms. Data stays inside Rwanda’s border, the camera flies through the violet fill into a three-line spec sheet, and those lines fuse into the three slabs of the mark. The extra t drops into the wordmark one last time.",
+  "global": {
+    "duration_s": 15.0,
+    "size": [
+      1920,
+      1080
+    ],
+    "fps": 60,
+    "bpm": 120,
+    "beat_s": 0.5,
+    "bar_s": 2.0,
+    "bar_downbeats": [
+      0.5,
+      2.5,
+      4.5,
+      6.5,
+      8.5,
+      10.5,
+      12.5,
+      14.5
+    ],
+    "render": "node render/render.mjs video --subframes 8 --shutter 0.5 --audio out/audio.wav",
+    "scene_files": [
+      "s01-stretch.js",
+      "s02-far.js",
+      "s03-snap.js",
+      "s04-in-country.js",
+      "s05-spec-stack.js",
+      "s06-lockup.js"
+    ],
+    "z_order_and_overlaps": [
+      "3.250–4.750: s01 (z 10, type plane and hairline) above s02 (z 5, map and HUD). s01 owns every glyph of the line and the hairline; s02 owns the period/Kigali dot from its first frame (3.250), the dots, packet, lanes and HUD.",
+      "6.500: hard handoff s02 → s03 on the same frame, no overlap. s03 re-creates s02’s exit state exactly.",
+      "8.500–8.660: s03 (z 6, HUD and pin exits only; its map canvas is OFF from 8.500) above s04 (z 4, silhouette).",
+      "10.000: hard handoff s04 → s05 (s05 z 7 paints full violet).",
+      "12.500: hard handoff s05 → s06 (z 8) on identical bar geometry."
+    ],
+    "word_count": 47
+  },
+  "design_system": {
+    "palette": {
+      "ink": {
+        "hex": "#07061A",
+        "role": "Ground for every world except the violet one. This is the engine #frame background (api.tokens.ink); scenes stay transparent over it."
+      },
+      "dotDim": {
+        "hex": "#2E2A66",
+        "role": "Non-Rwanda map dots, and nothing else. This is the one added neutral."
+      },
+      "slate": {
+        "hex": "#8C89A8",
+        "role": "Means \"not Strettch Cloud\": the far route lanes, the far packet trail, the Cape Town node, the far kicker, the far \"ms\" unit and \"peaks at 200 ms\". It drains to violet at the 6.50 snap and never appears after 6.62."
+      },
+      "violet": {
+        "hex": "#6B63FF",
+        "role": "Means Strettch Cloud and \"the extra\": the extra t, the period and Kigali dot, the Rwanda silhouette, the violet ground (10.00–12.62), the logo slabs and the pin."
+      },
+      "violetLight": {
+        "hex": "#8982FF",
+        "role": "Light and the human voice: the annotation, the hairline, heartbeat rings, the LED, lit Rwanda dots, the snap colour front, the local kicker and unit, the URL and sparks."
+      },
+      "violetDark": {
+        "hex": "#4C46B5",
+        "role": "Depth only: the 2-frame extrusion behind the letters on the 1.50 impact."
+      },
+      "paper": {
+        "hex": "#F4F3FF",
+        "role": "All type on ink, the far packet, and paper type plus fused bars on violet."
+      },
+      "white": {
+        "hex": "#FFFFFF",
+        "role": "createLogo() wordmark default fill. Used in the final lockup only; in the opener the letter fills are set to paper."
+      },
+      "rules": [
+        "Only Rwanda is ever lit (violet/violetLight). Every other country is dotDim.",
+        "No third-party brand colours or logos: Mobile Money is plain type.",
+        "The only gradients are pre-baked radial halo sprites and the single lockup sheen. No filter:blur().",
+        "Slate never outlives the snap, and violet never marks the far route."
+      ]
+    },
+    "typography": {
+      "brand_wordmark": "Only ever the real createLogo() letter paths (13 paths: s,t,r,e,t,t,c,h,c,l,o,u,d; index 5 is the extra t). Never typeset \"strettch\" in a font. SVG child transforms are in LOGO UNITS: px ÷ u, where u = height/32.",
+      "Inter var (100–900)": "The physical body, which obeys mass: \"stretch\" (wght 100→900→300), \"Africa-first\" (800), \"per request\" (500), \"Data stays in-country.\" (800), \"Mobile Money\" (300→800 wave).",
+      "JetBrains Mono var (100–800)": "The machine voice: every number (one odometer component, 3 truths), kickers, units, the \"Deploy…\" line and the URL. It is tabular by construction (advance 0.6 em).",
+      "Instrument Serif italic 400": "The human voice, used sparingly: \"the extra push.\" (the ONLY annotation of the idea), \"from\", \"/ month\", \"pay with\".",
+      "Space Grotesk": "Deliberately unused. The brand face is the real wordmark paths.",
+      "metrics_measured_in_chromium": "Inter: x-height 0.547 em, cap 0.734 em. JetBrains Mono: cap 0.734 em, advance 0.600 em. Instrument Serif italic: cap 0.734 em. At u = 11 the wordmark x-height is 10.95 units = 120.5 px, which matches Inter at 220 px.",
+      "minimums": "Smallest string is 34 px (kickers). Nothing below 28 px anywhere, and no reading text below 80% opacity. All text stays inside title-safe x 96–1824, y 54–1026.",
+      "physics_laws": [
+        "1. Stretched type thins: scaleX up means wght down (the far number is wght 300 at scaleX 1.15; the local number is wght 800 at scaleX 0.94).",
+        "2. Heavy glyphs thud (thud / recoil springs); light glyphs bounce (lightBounce).",
+        "3. Gravity is stylised heavy: only TWO gravity drops in the film, the extra t at 1.50 and the extra t at 13.25.",
+        "4. Type never moves during its read window (<2 px/frame, no CA). Motion happens between reads."
+      ]
+    },
+    "easing_vocabulary": {
+      "_rule": "For every spring, the tween window (end − start) EQUALS the spring duration, so spring time is real seconds. Always call api.tween(t, start, start + duration, from, to, api.ease.spring({...})).",
+      "reveal": "api.ease.snappy: rises through masks, entrances, camera settles",
+      "exit": "api.ease.swift: sinks through masks, exits, slide-outs",
+      "gravity": "api.ease.inQuad: the two t drops",
+      "pull": "api.ease.inCubic: building tension (the word pull)",
+      "crash": "api.ease.outExpo applied to log(scale): the 6.50 crash-zoom",
+      "dive": "api.ease.inCubic applied to log(scale): the 9.875 fly-through",
+      "carry": "api.ease.inOutCubic: objects carried along paths, colour/weight state changes",
+      "shuttle": "api.ease.cubicBezier(0.37, 0, 0.63, 1): packet legs (sine in-out, lingers at the ends)",
+      "drift": "api.ease.smooth: slow pushes",
+      "thud": "api.ease.spring({stiffness: 600, damping: 40, mass: 1, duration: 0.3}): zeta 0.82, ~1% overshoot, dead landing",
+      "settle": "api.ease.spring({stiffness: 380, damping: 22, mass: 1, duration: 0.6}): zeta 0.56, ~12% overshoot",
+      "lightBounce": "api.ease.spring({stiffness: 900, damping: 21, mass: 1, duration: 0.5}): zeta 0.35, ~31% overshoot (light glyphs)",
+      "squashBack": "api.ease.spring({stiffness: 900, damping: 21, mass: 1, duration: 0.3}): squash recovery",
+      "recoil": "api.ease.spring({stiffness: 520, damping: 36.5, mass: 1, duration: 0.45}): zeta 0.8, ~1.5% overshoot (the word snapping shut)",
+      "snapBack": "api.ease.spring({stiffness: 484, damping: 13.2, mass: 1, duration: 0.8}): omega 22, zeta 0.3, 37% overshoot, two visible oscillations (THE SNAP)",
+      "burst": "api.ease.spring({stiffness: 1600, damping: 24, mass: 1, duration: 0.5}): omega 40, zeta 0.3 (glyph burst inside Rwanda)",
+      "slabSpring": "api.ease.spring({stiffness: 600, damping: 34, mass: 1, duration: 0.5}): zeta 0.69, ~5% overshoot (bars to slabs)",
+      "shove": "api.ease.spring({stiffness: 700, damping: 22, mass: 1, duration: 0.45}): zeta 0.42, 24% overshoot = +14 px on the 60.34 px lockup shove"
+    },
+    "transition_grammar": {
+      "two_angles_only": "16.4° (atan(10/34), the top slab’s upper edge) and 7.1° (the slab seams). Every slanted mask, slab slide path, construction line and the sheen uses one of these. Everything else is orthogonal.",
+      "the_baseline_is_a_machine": "Text enters by RISING through a horizontal mask edge placed 4–8 px under its baseline (translateY from +mask depth to 0) and exits by SINKING through it. Two strings can swap through the same edge (3.00 and 4.50).",
+      "the_dot_chain": "One violet dot carries the story: the period of \"Africa-first cloud.\" → the Kigali dot → a packet leaves it → the packet rides the snapping route home → it lights the pin’s LED → the ink period of \"Mobile Money.\" → it punches the lockup’s LED hole.",
+      "world_changes (4 of max 5)": [
+        "W1 type specimen → W2 map (3.25–4.73): the violet period IS Kigali; a camera pull-back and a shockwave assemble the continent out of it, and the line sinks through the hairline, which reels into Kigali.",
+        "W2 map → W3 Rwanda container (8.50 downbeat): the LOD dots of Rwanda fuse into a solid silhouette on a crash push, a hard cut on the downbeat.",
+        "W3 → W4 violet ground (9.875–10.00): the camera flies into Rwanda’s fill until violet is the whole frame.",
+        "W4 → W5 ink lockup (12.25–13.10): the spec lines fuse into three bars, ink floods the gaps, and the bars spring into the exact logo slabs."
+      ],
+      "no_dissolves": "Never cross-fade two strings or two worlds. Things enter or exit through masks, slides, typing, scale-pops or rolls. Colour tweens on one object (violet → white, paper → violet) and fading ring/halo effects are fine.",
+      "beat_grid": "Tempo 120 BPM. Beats every 0.5 s. BAR DOWNBEATS ARE AT 0.5, 2.5, 4.5, 6.5, 8.5, 10.5, 12.5 and 14.5; 0.0–0.5 is a one-beat pickup. Hard cuts and impacts sit on beats or half-beats (x.25 / x.75)."
+    },
+    "texture_and_post": {
+      "grain_vignette": "Engine defaults (grain 0.07 overlay, radial vignette). No scene-level grain.",
+      "shake_and_ca": "Engine hits only, and they move the WHOLE stage. Six hits in camera_shake_and_ca_hits, each placed off read windows (CA clears after 0.1167·ln(I/0.03) s: 0.2 → 0.22 s, 0.3 → 0.27 s, 0.4 → 0.30 s, 0.6 → 0.35 s, 0.8 → 0.38 s, 1.0 → 0.41 s).",
+      "motion_blur": "Final render: node render/render.mjs video --subframes 8 --shutter 0.5. Fast thin things ALSO draw analytic streaks: map dots during the crash zoom and the packet/trail draw a capsule from pos(t − 0.0021) to pos(t). Never rely on accumulation alone for anything moving more than 40 px per frame.",
+      "cpu_rules": "No filter:blur or backdrop-filter. Glows are pre-baked radial-gradient sprites (drawImage / <image>). Canvas scenes re-project geometry every frame; never CSS-scale a rasterised canvas. Keep particle counts ≤ ~3,500 per frame.",
+      "specimen_texture": "W1 has a 2 px #8982FF (70% opacity) baseline hairline, the only rule line in the opener. In the lockup, optional 1 px #8982FF (25% opacity) construction lines at 16.4°/7.1° draw and retract before 13.45.",
+      "determinism": "Everything is a closed-form function of global t. Use api.rng(seed) in build() only, and api.hash / api.noise in render(). No Math.random, Date.now, CSS animations or accumulated state."
+    },
+    "shared_components": {
+      "map_projection": "Equirectangular, 12 px per degree at Z = 1. screen = K_s + ((lon − 30.0619)·12·Z, −(lat + 1.9441)·12·Z), with K_s = Kigali’s screen position. s02: K_s = (1560, 530), Z = 1. s03: K_s = (1560, 530), Z(t) as specified. s04 container framing: K_s = (1061.27, 544.75), Z = 44 (Rwanda bbox 427–1493 × 78–1002, centred on 960, 540). Cape Town at Z = 1 is C = (1420.35, 913.77).",
+      "dot_field": "api.africaDots(1) gives 2,553 dots. Use them all; do not filter islands. Radius 2.6 px, fill #2E2A66. The single Rwanda grid dot (30, −2) is #8982FF r 3.2 and sits under the Kigali dot. Kigali itself is drawn separately at K_s.",
+      "lanes(E)": "The route is two quadratic Béziers from K = (1560, 530) to a far end E. d = E − K, L = |d|, û = d/L, n̂ = (−û.y, û.x) (points west when E = C), h = 90·L/408.39, M = (K + E)/2. OUT lane: A0 = K + 6n̂, A1 = M + (h + 6)n̂, A2 = E + 6n̂. RETURN lane: B0 = K − 6n̂, B1 = M + (h − 6)n̂, B2 = E − 6n̂. Parameter s runs 0 at Kigali to 1 at the far end. At rest (E = C): A0 (1554.36, 527.95), A1 (1399.96, 689.06), A2 (1414.71, 911.72); B0 (1565.64, 532.05), B1 (1411.24, 693.16), B2 (1425.98, 915.82). Out lane 2.5 px, return lane 2 px, round caps. s02 and s03 MUST use this exact function so the 6.50 handoff matches to the pixel.",
+      "odometer": "One component, three truths. A row of cells at a natural pitch of 0.6 em. Each cell is a vertical strip of glyphs inside a clip window exactly 1.0 em tall (top = baseline − 0.80 em), line-height 1.0 em, and it rolls by translateY. COUNT mode (s02): value v drives the strips. ones = v mod 10 (continuous, wraps via a 0–9,0 strip); tens = floor(v/10) mod 10 + clamp((v mod 10) − 9, 0, 1); hundreds = floor(v/100) + clamp((v mod 100) − 99, 0, 1). SLOT mode (s03, s05): strip = [from, 3 seeded digits (api.hash(cell, k)), to]; translateY 0 → −4 em (or −(n−1) em) with outCubic, from the roll start to that cell’s lock time. Accumulation blur provides the vertical smear.",
+      "halo_sprite": "Pre-render once in build(): a 128×128 canvas radial gradient, #8982FF at alpha 1 in the centre to alpha 0 at the edge. Draw it scaled to the stated radius and alpha.",
+      "mask_rise": "rise(el, t0, dur, depth) = translateY(tween(t, t0, t0 + dur, depth, 0, snappy)) inside a parent whose overflow/clip bottom edge is the stated mask edge. sink = translateY 0 → depth with swift."
+    },
+    "coordinates": "Stage px, 1920×1080, origin top-left, global time t in seconds. Every scene root is full-frame and transparent. createLogo(): 1 logo unit = height/32 px; the LED hole centre is at logo units (2.857, 28.977), rx 0.68, ry 0.615; the wordmark baseline (flat-bottom letters) is at 22.45 units, round overshoot at 22.83, ascender top at 7.85, t top at 8.53."
+  },
+  "scenes": [
+    {
+      "id": "s01-stretch",
+      "start": 0.0,
+      "end": 4.75,
+      "z": 10,
+      "purpose": "NAME, then WHAT IT IS. The dictionary word \"stretch\" is pulled until it tears, the extra violet t drops into the gap and the word re-sets as the REAL strettch wordmark (\"the extra push.\"). \"cloud\" joins, the camera pulls back while \"strettch\" swaps out for \"Africa-first\", and the line’s violet period becomes Kigali.",
+      "entry_state": "At t = 0.000 the frame is empty ink. s01 owns every pixel.",
+      "exit_state": "From 4.730 nothing of s01 is visible: every glyph has sunk below the mask edge and the hairline has reeled to zero length at x 1545.6. Handoffs: (a) from 3.250 the violet period / Kigali dot at (1560, 530) r 14.4 is OWNED BY s02, and s01 never draws it; (b) from 4.550 the slot x 131–683, y 397–544 is shared: s01’s \"Africa-first\" sinks while s02’s odometer rises through the same edge at screen y 548.76. Both are clipped there, and s01 is on top (z 10).",
+      "layers": [
+        "Hairline: a screen-space SVG polyline, 2 px #8982FF at 70% opacity, OUTSIDE the plane.",
+        "Type plane: a 1920×1080 div with transform-origin 0 0 whose transform animates only during 3.00–3.25. Inside it: (a) SVG with 7 Inter <text> glyphs (text-anchor middle, y = 600 baseline); (b) createLogo(plane, {height: 352}) at left −297.52 px, top 353.05 px, so u = 11, the wordmark baseline is at y 600 and the s starts at x 171.96. markGroup is hidden; letters 0–4 and 6–12 are filled #F4F3FF and letter 5 #6B63FF; (c) an extrusion copy of letters 0–7 filled #4C46B5; (d) the annotation (leader + serif text); (e) 12 SVG <text> glyphs \"Africa-first\", Inter 800 at 220.2 px, #F4F3FF, placed by cumulative canvas measureText advances with the RIGHT edge of the word at plane x 1057.57, so the left edge is ≈ −179.0. Every glyph layer is clipped to plane y < 606 (the mask edge), except the falling t (letter 5) during 1.25–1.50."
+      ],
+      "choreography": [
+        "0.000–0.200  The hairline draws from x 960 outward to x 96 and x 1824 at y 600 (endpoints eased with reveal).",
+        "0.200–0.520  \"stretch\" rises through the mask. Glyph i (0..6: s,t,r,e,t,c,h) goes translateY +175 → 0 px with reveal; start 0.200 + 0.020·i, duration 0.200. Inter wght 100, 220 px, #F4F3FF. Glyph centres x = [620, 728, 820, 935, 1045, 1156, 1293], baseline 600. The centres NEVER change with weight; that is the width lock.",
+        "0.500–0.680  DOWNBEAT weight slam: every glyph goes wght 100 → 900 (outExpo). Centres stay fixed, so the word gains mass without moving.",
+        "1.000–1.400  PULL. Glyph i’s centre goes from its rest x to the pulled x [185, 290, 385, 505, 640, 1590, 1735] with progress p_i = inCubic(progress(t, 1.000 + d_i, 1.400)), d = [0, .03, .06, .08, .10, .03, 0]. The ends lead and the inner glyphs lag. With the same p_i, wght goes 900 → 300 and scaleX 1 → 1.25 about each glyph centre (stretched type thins). The tear opens between t (index 4) and c.",
+        "1.400–1.500  Hold under tension: each glyph’s x += 1.5·api.noise(t·40, i).",
+        "1.250–1.500  THE EXTRA T (gravity drop #1). createLogo letter 5 (#6B63FF, box centre x 746.27) falls with translateY −640 → 0 px (inQuad; ÷11 = −58.18 units). Over the fall it stretches to scaleY 1.22 and scaleX 0.90, with origin at the bottom centre.",
+        "1.500  IMPACT (CA hit 0.6). All Inter glyphs hide. Real letters 0,1,2,3,4,6,7 appear at the PULLED centres at scaleX 1.0. Letter 5: squash scaleY 0.72 / scaleX 1.28 for 1.500–1.533, then back to 1 with squashBack over 1.533–1.833. The extrusion copy is visible 1.500–1.534, offset (+9, +9) px. Shockwave: letter j ≠ 5 goes translateY −14·sin(π·τ/0.12) for τ = t − 1.500 − 0.025·|j − 5| in [0, 0.12].",
+        "1.500–1.950  RECOIL. Each letter’s x offset from home = (pulled − home)·(1 − recoil(progress(t, 1.500, 1.950))). Home box centres: s 224.65, t 329.48, r 432.99, e 539.69, t 651.45, [t 746.27], c 864.41, h 1002.68. The right pair snaps ~730 px left; the left group eases ~12–48 px right.",
+        "1.500–2.200  The hairline is plucked: y(x) = 600 + 10·e^(−6τ)·sin(2π·7·τ)·sin(π·(x − 96)/1728), τ = t − 1.5 (97-point polyline).",
+        "1.520–1.600  The leader line draws at x 746.27 from y 612 to 660 (outCubic; 2 px #8982FF).",
+        "1.580–1.720  \"the extra push.\" wipes on left to right (clip-path inset, reveal). Instrument Serif italic 64 px #8982FF, centred on x 746.27 (x 577.2–915.4), baseline 718.",
+        "1.750–2.330  \"cloud\" rises (light glyphs bounce). Letters 8..12 go translateY +175 → 0 px with lightBounce; start 1.750 + 0.020·(j − 8), window 0.500. Box x: c 1129.95, l 1258.76, o 1331.25, u 1485.91, d 1621.10–1748.04.",
+        "2.750–2.850  The annotation retracts: the text is wiped right to left 2.750–2.820 (inCubic) and the leader pulls up into the t 2.790–2.850 (end y 660 → 612).",
+        "3.000–3.255  ANCHOR SWAP. Letters 0–7 (including the violet t) sink: translateY 0 → +175 px with exit; start 3.000 + 0.015·j, duration 0.150.",
+        "3.000–3.250  CAMERA PULL-BACK. The plane transform is translate(261.50·e px, 108.04·e px) scale(1 − 0.27273·e) with e = snappy(progress(t, 3.000, 3.250)). This scales about (958.8, 396.1); at e = 1 the wordmark unit is u = 8. The hairline follows with the same e: y 600 → 544.4, x-ends [96, 1824] → [111.2, 1545.6].",
+        "3.000–3.290  \"Africa-first\" rises: glyph i (0..11) goes translateY +175 → 0 plane-px with reveal; start 3.000 + 0.010·i, duration 0.180. Final screen positions: \"Africa-first\" x 131.3–1030.6, \"cloud\" x 1083.3–1532.8, baseline 544.4, mask edge at screen 548.76.",
+        "3.250  The violet period pops at screen (1560, 530). It is DRAWN BY s02; s01 draws nothing there.",
+        "3.290–4.500  Hold. \"Africa-first cloud.\" is still while the continent (s02) assembles behind it.",
+        "4.500–4.730  The line sinks: all 17 glyphs (Africa-first + cloud) go translateY 0 → +175 plane-px with exit, duration 0.150, start 4.500 + 0.005·i from left to right.",
+        "4.500–4.700  The hairline reels into Kigali: its left end goes x 111.2 → 1545.6 (inCubic), right end fixed. It is hidden from 4.700."
+      ],
+      "text": [
+        {
+          "text": "stretch",
+          "font": "Inter var, wght 100→900 (slam at 0.50)",
+          "size_px": 220,
+          "fully_legible_from": 0.48,
+          "until": 1.07
+        },
+        {
+          "text": "the extra push.",
+          "font": "Instrument Serif italic 400, #8982FF",
+          "size_px": 64,
+          "fully_legible_from": 1.85,
+          "until": 2.75
+        },
+        {
+          "text": "strettch cloud",
+          "font": "createLogo() wordmark paths, height 352 (u 11, x-height 120 px), #F4F3FF; extra t #6B63FF",
+          "size_px": 352,
+          "fully_legible_from": 2.2,
+          "until": 3.0
+        },
+        {
+          "text": "Africa-first cloud.",
+          "font": "Inter 800 (160.1 px on screen) + wordmark \"cloud\" (u 8) + violet period (s02)",
+          "size_px": 160,
+          "fully_legible_from": 3.3,
+          "until": 4.5
+        }
+      ],
+      "build_notes": [
+        "Budget ~70 min. Polish to drop first if over budget: extrusion copy, then the hairline pluck (keep the line straight).",
+        "Use SVG <text> for the Inter glyphs so the baseline and centre are exact: text-anchor=\"middle\", y = 600, style fontVariationSettings \"'wght' N\" (or font-weight). Set font-size once; animate only wght, x and transform.",
+        "createLogo letter transforms are in LOGO UNITS: divide every px value by u = 11 inside the plane. Override transform-origin to \"50% 100%\" (fill-box) for the squash on letter 5.",
+        "Bare \"strettch\" is on screen alone only 1.50–1.75, before \"cloud\" starts rising. Keep it that way.",
+        "Verify with: node render/render.mjs still --solo s01-stretch --times 0.49,1.07,1.5,1.9,2.4,3.3,4.6"
+      ]
+    },
+    {
+      "id": "s02-far",
+      "start": 3.25,
+      "end": 6.5,
+      "z": 5,
+      "purpose": "PROBLEM, THE TENSION. The continent assembles as a shockwave out of Kigali (the period). A request travels to the nearest hyperscaler region in Cape Town and back while the odometer counts to ~110 ms. The route is plucked on the 200 ms spike and trembles under a riser: a band pulled too tight.",
+      "entry_state": "At t = 3.250 s02 draws only the Kigali dot at (1560, 530), r 0 (it starts popping). There are no map dots yet. s01’s line \"Africa-first cloud\" is above it (z 10) and its right end (\"d\") is at x 1532.8.",
+      "exit_state": "EXACT HANDOFF STATE AT t = 6.500 (s03 must reproduce it on its first frame). All 2,553 dots at Z = 1, r 2.6, #2E2A66. Kigali dot at (1560, 530), r 9, #6B63FF, with a halo sprite r 27 at 35% opacity. No heartbeat ring is active. Lanes = lanes(E = C) exactly (the tremble amplitude reaches 0 at 6.50), both fully drawn in slate. The packet (paper r 7, 8-ghost trail along the out lane) sits exactly at the out-lane end A2 = (1414.71, 911.72). The Cape Town node, a slate ring r 9 with 2.5 px stroke, is at C = (1420.35, 913.77). HUD: kicker \"Cape Town · nearest hyperscaler region\" (slate, x 131, baseline 372); odometer \"~110\" (wght 300, scaleX 1.15 about x 131, cells at screen x 131 + 138·i, baseline 544.4, #F4F3FF); unit \"ms\" at x 703, baseline 544.4, slate; \"per request\" at x 131, baseline 612; \"peaks at 200 ms\" at x 131, baseline 668.",
+      "layers": [
+        "One full-frame canvas (bottom), redrawn every frame: dots, heartbeat rings, lanes, packet and trail, Kigali dot and halo, Cape Town node and impact rings.",
+        "HUD DOM on top: kicker, odometer group (4 cells), unit, \"per request\", \"peaks at 200 ms\". Each has its own clip for mask rises."
+      ],
+      "choreography": [
+        "3.250–3.400  THE PERIOD. The Kigali dot pops at (1560, 530): r 0 → 14.4 (outBack), #6B63FF. The halo sprite radius is 3·r at 35% opacity.",
+        "3.250–4.070  SHOCKWAVE ASSEMBLY. Dot i (projected per shared_components.map_projection, Z = 1) starts at t_i = 3.250 + 0.600·(d_i / 740), where d_i is its px distance to Kigali. Over 0.220 s its radius goes 0 → 2.6 (outBack) and its position goes from K + 0.85·(P_i − K) to P_i (outCubic).",
+        "3.50, 4.00, 4.50, 5.00, 5.50, 6.00  HEARTBEAT. A ring at Kigali: r 14.4 → 64 (outCubic, 0.45 s), 2 px #8982FF, opacity 0.8 → 0 (linear). The ring start radius follows the dot radius (9 after 4.70).",
+        "4.500–4.700  The Kigali dot settles to map-marker size: r 14.4 → 9 (reveal).",
+        "4.000–4.060  The packet (paper #F4F3FF r 7) emerges from the Kigali dot (scale 0 → 1).",
+        "4.000–6.500  PACKET LEGS, all with the shuttle ease: out 4.00–4.50 (out lane s 0 → 1), back 4.50–5.00 (return lane 1 → 0), out 5.00–5.50, back 5.50–6.00, out 6.00–6.50. The last leg arrives at A2 EXACTLY at 6.500. Trail: 8 ghosts at t − 0.012·k, r 7·(1 − k/10), opacity 0.5·(1 − k/9). The packet streak runs from pos(t − 0.0021) to pos(t).",
+        "4.000–5.000  The lanes draw behind the packet: the out lane 4.00–4.50 (from K to the packet’s s), the return lane 4.50–5.00 (from the far end back to the packet’s s). Both stay fully drawn after that. Slate at 85% / 60% opacity.",
+        "4.500  The packet hits Cape Town (downbeat). The node pops (outBack, 0.15 s) and an impact ring runs r 9 → 34 (0.25 s, slate, opacity 0.7 → 0). A second impact ring fires at 5.50.",
+        "4.500–4.690  The kicker types on: \"Cape Town · nearest hyperscaler region\", JetBrains Mono 500, 34 px, slate, x 131, baseline 372; character k appears at 4.500 + 0.005·k.",
+        "4.550–4.750  The odometer rises through the edge at screen y 548.76 (translateY +170 → 0, reveal). Cells: \"~\" (static) plus three COUNT-mode digit strips, JetBrains Mono wght 300, 200 px, #F4F3FF, group scaleX 1.15 about x 131, baseline 544.4. v(t) = 110·inOutQuad(progress(t, 4.00, 5.00)), so it is already rolling as it rises. The unit \"ms\" (JetBrains Mono 500, 72 px, slate, x 703, baseline 544.4) rises with the group.",
+        "5.000  LOCK at \"~110\": the digits flash #FFFFFF for 2 frames (5.000–5.033).",
+        "5.000–5.100  \"per request\" rises: Inter 500, 40 px, #F4F3FF at 80% opacity, x 131, baseline 612, mask edge 620, reveal.",
+        "5.250  PLUCK (the 200 ms spike). Both lanes and the packet are displaced along n̂ by sin(π·s)·22·e^(−3.5τ)·sin(2π·9·τ), with τ = t − 5.25.",
+        "5.250–5.350  \"peaks at 200 ms\" rises: JetBrains Mono 600, 36 px, slate, x 131, baseline 668, mask edge 676, reveal.",
+        "5.500–6.500  TREMBLE under the riser: add sin(π·s)·A(t)·api.noise(t·24, 7) along n̂, where A(t) = (1.5 + 6.5·progress(t, 5.50, 6.40)²)·(1 − progress(t, 6.40, 6.50)). The amplitude builds, then freezes to 0 at 6.50 (a held breath before release).",
+        "6.500  Scene ends. s03 takes every object over in the exit_state above."
+      ],
+      "text": [
+        {
+          "text": "Cape Town · nearest hyperscaler region",
+          "font": "JetBrains Mono 500, slate #8C89A8",
+          "size_px": 34,
+          "fully_legible_from": 4.72,
+          "until": 6.5
+        },
+        {
+          "text": "~110 ms per request",
+          "font": "JetBrains Mono wght 300 ×1.15 (number) + Mono 500 72 px (ms) + Inter 500 40 px (per request)",
+          "size_px": 200,
+          "fully_legible_from": 5.1,
+          "until": 6.5
+        },
+        {
+          "text": "peaks at 200 ms",
+          "font": "JetBrains Mono 600, slate",
+          "size_px": 36,
+          "fully_legible_from": 5.37,
+          "until": 6.5
+        }
+      ],
+      "build_notes": [
+        "Budget ~70 min. Cache the 2,553 projected dot positions and distances in build(); render is one clearRect plus loops.",
+        "Implement lanes(E) exactly as in design_system.shared_components (s03 reuses it). The displacement applies to both lanes and to the packet at its current s.",
+        "Draw partial Béziers for the lane reveal by sampling 48 points from s = 0 to s_packet (out) or from s_packet to 1 (return).",
+        "Never name the hyperscaler. Cape Town is slate, a ring and never a pin. Kigali is the only violet thing on the map.",
+        "Verify: still --solo s02-far --times 3.6,4.2,4.75,5.12,5.3,6.3,6.49"
+      ]
+    },
+    {
+      "id": "s03-snap",
+      "start": 6.5,
+      "end": 8.7,
+      "z": 6,
+      "purpose": "THE HERO SNAP, then LOCAL. On the 6.50 downbeat the route is released: its far end whips home to Kigali on an analytic spring with two overshoots while a colour front drains slate to violet. The camera crash-zooms 20× into Rwanda, which re-samples from one dot to 828. The three real logo slabs lock onto Kigali as the Kigali-1 pin, the packet lights the LED, and the same odometer rolls down to \"10–30 ms\".",
+      "entry_state": "Identical to s02.exit_state at t = 6.500 (reproduce every listed object at those exact px). The CA hit of 1.0 at 6.500 masks any sub-pixel mismatch, but match exactly anyway.",
+      "exit_state": "The map canvas renders ONLY for t < 8.500. At 8.500 s04’s solid silhouette replaces the fine dots on the same projection (K_s (1560, 530), Z 21.0). From 8.500 to 8.660 only the HUD and the pin remain; they exit over s04 (z 6 above z 4). Nothing of s03 is visible from 8.660.",
+      "layers": [
+        "Map canvas (bottom): dots with streaks, LOD Rwanda dots, lanes, packet, Cape Town node pop.",
+        "Pin: createLogo(root, {markOnly: true, height: 128}) at left 1548.57, top 414.09 (u = 4; its LED hole centre is exactly Kigali (1560, 530)), plus an LED disc and halo sprite.",
+        "HUD DOM: kicker (roll window), odometer (5 cells), unit. Re-create s02’s HUD at the identical positions."
+      ],
+      "choreography": [
+        "6.500  SNAP (CA hit 1.0; the riser cuts dead). Far end E(t) = C + (K − C)·snapBack(progress(t, 6.500, 7.300)). The first overshoot passes 152 px beyond Kigali to ≈ (1612, 387) at ~6.65, then −13.8%, then +5%. Lanes = lanes(E(t)) (same function as s02). When E crosses Kigali, n̂ flips and the bulge flips with it: a whip. The lanes are hidden from 7.000.",
+        "6.500–6.620  COLOUR FRONT along the lanes: for s < f the stroke is #8982FF, beyond it slate, with a 12 px blend, where f = 1.25·progress(t, 6.50, 6.62). Implement as a canvas linear gradient from K to E. Stroke width 2.5 → 3 px.",
+        "6.500–7.000  The packet rides the out-lane far end A2(E(t)) and turns #8982FF as the front passes (6.58). From 6.85 it blends to Kigali: P = lerp(A2(E), K, smoothstep(progress(t, 6.85, 7.00))). It is exactly at (1560, 530) at 7.000 and is then absorbed.",
+        "6.500–6.580  The Cape Town node pops out (scale 1 → 0, inBack) with 6 slate sparks. It is world-anchored, so it also flies off with the zoom.",
+        "6.500–7.100  CRASH ZOOM about K = (1560, 530): Z = 20^(outExpo(progress(t, 6.50, 7.10))). Each dot’s screen position = K + (P1 − K)·Z. Moving dots draw as round-capped capsules from pos(t − 0.0021) to pos(t), width 2r; cull off-screen.",
+        "7.100–8.500  Map creep: Z = 20 + (t − 7.10)/1.40, reaching 21.0 at 8.50. This applies to map geometry only; the HUD and pin are screen-fixed.",
+        "6.750–7.050  LEVEL-OF-DETAIL RE-SAMPLE. 828 fine Rwanda dots (0.05° grid, lon 28.85–30.90, lat −1.00 to −2.85, kept if api.pointInPolygons hits the Rwanda polygon). Each is projected with the same Z and grows r 0 → 3.0 (outBack, 0.15 s) at t_j = 6.75 + 0.15·(dist_j / dist_max), #8982FF. The coarse Rwanda dot and the Kigali dot shrink to 0 over 6.80–6.93.",
+        "6.810–6.930  PIN FLAM, slab 1. The bottom slab slides from offset (−170, 0) px to 0 (exit ease = violent end, 0.12 s), then locks with scaleX 1.06 → 1 via thud about its own centre. Offsets are ÷4 into logo units.",
+        "6.845–6.965  Middle slab: slides along 7.1° from offset (−158.8, +19.8) to 0, same lock.",
+        "6.880–7.000  Top slab: slides along 16.4° from offset (+153.5, −45.2) to 0, locking ON THE BEAT (CA hit 0.3).",
+        "7.000  The LED lights: an #8982FF disc r 3.5 behind the hole plus a halo sprite r 22 at 60% opacity. It blinks at 7.50 and 8.00 (opacity 0.6 → 1 → 0.6 over 0.15 s).",
+        "6.500–6.600  \"per request\" and \"peaks at 200 ms\" sink (exit, 0.10 s).",
+        "6.550–6.750  KICKER ROLL inside a clip window y 336–382: the old line goes translateY 0 → −44 while \"Strettch Cloud · Kigali-1\" (#8982FF, same font, x 131, baseline 372) comes up from +44 → 0 (reveal).",
+        "6.580  The unit \"ms\" snaps slate → #8982FF (2 frames).",
+        "7.000–7.250  ODOMETER ROLL-DOWN (SLOT mode, 5 cells). Cell from → to: 0 \"~\" → \"1\", 1 \"1\" → \"0\", 2 \"1\" → \"–\", 3 \"0\" → \"3\", 4 blank → \"0\". All cells start at 7.000 and lock at 7.0625, 7.109, 7.156, 7.203 and 7.250 respectively. At the same time the group scaleX goes 1.15 → 0.94 and wght 300 → 800 (carry); the natural cell pitch stays 120, so screen cells end at x 131 + 112.8·i. The unit moves x 703 → 715.",
+        "7.250–7.550  THUD: the number group goes scaleY 0.93 → 1 about the baseline (thud, 0.30 s window). \"10–30 ms\" is dense, heavy and local.",
+        "7.300–8.500  HOLD: \"Strettch Cloud · Kigali-1\" / \"10–30 ms\". The only motion is the map creep and the LED blinks.",
+        "8.500  The map canvas stops drawing (s04 takes the world). The LED goes off.",
+        "8.500–8.660  EXIT over s04: kicker, number and unit sink (exit, 0.12 s, stagger 0.02 from top to bottom). Pin slabs slide out, reversing their entry vectors (exit, 0.12 s): top at 8.50, middle at 8.52, bottom at 8.54."
+      ],
+      "text": [
+        {
+          "text": "Strettch Cloud · Kigali-1",
+          "font": "JetBrains Mono 500, #8982FF",
+          "size_px": 34,
+          "fully_legible_from": 7.27,
+          "until": 8.5
+        },
+        {
+          "text": "10–30 ms",
+          "font": "JetBrains Mono wght 800 ×0.94 (number, #F4F3FF) + Mono 500 72 px (ms, #8982FF)",
+          "size_px": 200,
+          "fully_legible_from": 7.3,
+          "until": 8.5
+        }
+      ],
+      "build_notes": [
+        "Budget ~75 min. Heaviest risk: the zoom. Re-project every frame in canvas; never CSS-scale the canvas.",
+        "Copy the lanes(E) and odometer specs from design_system.shared_components verbatim; they must match s02 at 6.500.",
+        "Pin: createLogo markOnly slabs are separate paths. Put the slide offsets on each slab path in logo units (px ÷ 4). Draw the LED disc under the mark group so it shows through the evenodd hole; draw the halo above it.",
+        "The snap’s first 0.15 s moves the string end ~100 px per frame, so draw the lanes with 8+ samples and let the 8-subframe accumulation smear them; do not add blur filters.",
+        "Verify: still --solo s03-snap --times 6.5,6.56,6.65,6.8,7.0,7.3,8.49,8.6"
+      ]
+    },
+    {
+      "id": "s04-in-country",
+      "start": 8.5,
+      "end": 10.0,
+      "z": 4,
+      "purpose": "SOVEREIGNTY. Rwanda becomes a container: \"Data stays in-country.\" bursts outward inside the country and the letters bounce back off the border. Then the camera flies into Rwanda’s violet fill until it is the whole frame.",
+      "entry_state": "At t = 8.500: the Rwanda silhouette, filled #6B63FF with a 2 px #8982FF stroke at 80% opacity (non-scaling), projected with K_s (1560, 530) and Z 21.0. It spans ≈ x 1257–1767, y 308–749, the same footprint as s03’s last fine-dot cluster. s03’s HUD and pin are still exiting above it until 8.660.",
+      "exit_state": "By the frame at 9.983 the fly-through scale about F is ≥ 6.5×, so the frame is 100% #6B63FF. At 10.000 s05 paints its own full-frame violet (hard handoff on the beat).",
+      "layers": [
+        "World group (SVG): the smoothed Rwanda path, plus a text group of 20 glyph <text> elements (9 for \"Data stays\" plus 11 for \"in-country.\"), Inter 800 at 130 px, #07061A.",
+        "The camera is ONE group transform. Container framing is the authored space: K_c = (1061.27, 544.75), Z_c = 44. During 8.50–8.58: translate(K_s(t)) scale(Z(t)/44) translate(−K_c). During 9.875–10.00: translate(F) scale(Z_mult) translate(−F)."
+      ],
+      "choreography": [
+        "8.500  CUT on the downbeat (CA hit 0.4): the fine dots fuse into the solid silhouette. Build the path from the Rwanda 50 m ring (83 points) projected in container framing and smoothed with a centripetal Catmull–Rom spline converted to cubic Béziers.",
+        "8.500–8.580  CRASH PUSH to container framing: K_s goes (1560, 530) → (1061.27, 544.75) and Z goes 21 → 44 (log-space), both with reveal. The silhouette then spans x 427–1493, y 78–1002, centred on (960, 540).",
+        "8.560–9.060  BURST. Line 1 \"Data stays\": 9 glyphs plus a space, x 695.3–1374.7, baseline 505. Line 2 \"in-country.\": 11 glyphs, x 669.3–1400.7, baseline 640. Each glyph centre starts at B = (1035, 548), scale 0.35, and springs to its home H_i with burst over 0.5 s (scale uses the same spring).",
+        "Wall collision (closed-form): let u_i = (H_i − B)/|H_i − B|, overshoot o = |H_i − B|·(s − 1) while s > 1, and m_i = (distance from H_i along u_i to the unsmoothed border polygon) − (glyph half-extent along u_i), computed once in build(). If o > m_i, then o = m_i − 0.4·(o − m_i). Position = H_i + u_i·o. The outermost glyphs (the D, the last s of \"stays\", the i of \"in\" and the final period) hit the wall at ~8.64 and rebound; the inner glyphs never reach it.",
+        "8.640–8.760  The border takes the hit: the silhouette (not the text) scales 1 → 1.012 → 1 about (960, 540) as a sine bump. The same breath repeats on the 9.00 and 9.50 beats (0.20 s each).",
+        "8.960–9.875  HOLD, fully legible. The text does not move.",
+        "9.875–10.000  FLY-THROUGH. The whole world group (silhouette and text) scales about F = (710, 850) by Z_mult = 18^(inCubic(progress(t, 9.875, 10.000))). F is ≥ 108 px inside the border in every direction and 182 px below the text, so the glyphs fly up out of frame and violet covers everything by 9.98."
+      ],
+      "text": [
+        {
+          "text": "Data stays in-country.",
+          "font": "Inter 800, ink #07061A on #6B63FF (≈4.5:1)",
+          "size_px": 130,
+          "fully_legible_from": 8.96,
+          "until": 9.875
+        }
+      ],
+      "build_notes": [
+        "Budget ~50 min. Glyph home positions come from canvas measureText cumulative advances, centred on x 1035. Store H_i and m_i in build().",
+        "Use vector-effect: non-scaling-stroke on the border so the 2 px wall stays 2 px through both camera moves.",
+        "The fly-through pivot F must stay inside the silhouette; do not move it.",
+        "Verify: still --solo s04-in-country --times 8.5,8.57,8.64,8.96,9.5,9.93,9.98"
+      ]
+    },
+    {
+      "id": "s05-spec-stack",
+      "start": 10.0,
+      "end": 12.5,
+      "z": 7,
+      "purpose": "PROOF. Inside Rwanda (violet ground), three lines land on consecutive beats: the deploy promise, the local price (the odometer’s third truth: 3,999 RWF) and Mobile Money. They are force-justified to the exact slab ratio 34 : 34 : 27.5 (1560 / 1560 / 1262.7 px), then fuse into three solid bars that become the logo.",
+      "entry_state": "At t = 10.000 the frame is full #6B63FF. s05 paints its own full-frame violet rect from 10.000.",
+      "exit_state": "EXACT HANDOFF STATE AT t = 12.500, held static from 12.480: full-frame #6B63FF; bar B1 #F4F3FF rect x 180–1740, y 283–330; B2 x 180–1740, y 449–610; B3 x 180–1442.7, y 762–850; an ink #07061A dot centred (1430.7, 838) r 12 on top of B3. No glyphs visible.",
+      "layers": [
+        "A violet rect, then three line groups, each with its glyph layer (clip band), its fusion bar rect, and its own rise masks."
+      ],
+      "choreography": [
+        "10.000–10.300  LINE 1 TYPES: \"Deploy your first compute in 2 minutes.\" (39 chars), JetBrains Mono 700, 64 px, #F4F3FF, baseline 330. Character k at x 180 + 40.042·k (+1.642 px tracking, force-justified to x 180–1740), visible from 10.000 + 0.0077·k. A #F4F3FF block caret (38 × 50 px) sits at the next cell while typing and is removed at 10.500.",
+        "10.500–10.650  LINE 2 (baseline 610, mask edge 618): \"from\" (Instrument Serif italic 110 px, #07061A, x 180) rises (reveal).",
+        "10.500–10.8125  \"3,999\" (JetBrains Mono 800, 220 px, #F4F3FF, x 433.1, cell pitch 132). The group rises 10.500–10.600. The digit drums spin in SLOT mode with 12-glyph strips (translateY 0 → −11 em, outCubic) and lock on 32nds: \"3\" 10.625, \"9\" 10.6875, \"9\" 10.750, \"9\" 10.8125. The comma is static.",
+        "10.625–10.925  \"RWF\" (JetBrains Mono 700, 120 px, #F4F3FF, x 1151.5) slides in from +80 px to 0 (thud).",
+        "10.6875–10.8375  \"/ month\" (Instrument Serif italic 110 px, #07061A, x 1425.9) rises. Gaps are 58.4 px, so the line is justified x 180–1740.",
+        "11.000–11.150  LINE 3 (baseline 850, mask edge 858): \"pay with\" (Instrument Serif italic 110 px, #07061A, x 180) rises.",
+        "11.000–11.220  \"Mobile Money\" (Inter, 120 px, #F4F3FF, x 570.5–1408.7; glyph centres FIXED at their wght-800 positions) rises 11.000–11.120 at wght 300. Weight wave: glyph i goes wght 300 → 800 over [11.000 + 0.012·i, +0.080]. Phone buzz: group x = 14·sin(2π·16·(t − 11.03))·(1 − progress(t, 11.03, 11.22)).",
+        "11.250  The ink period pops: r 0 → 12 (outBack, 0.12 s) at (1430.7, 838). This is the dot that becomes the LED hole.",
+        "11.280–12.250  HOLD. All three lines are static and readable together.",
+        "12.250–12.400  FUSE line 1. Glyphs go to #F4F3FF; stroke in the same colour grows 0 → 0.45·cap; the glyph clip band shrinks from [baseline − 1.3·size, baseline + 0.4·size] to [baseline − cap, baseline]; a paper bar grows from the band’s midline to the full band (inQuad). Result: B1.",
+        "12.300–12.450  FUSE line 2 the same way (the serif words turn paper first, in 0.03 s). Result: B2.",
+        "12.400–12.480  FUSE line 3 the same way; the ink period is excluded and stays on top. Result: B3."
+      ],
+      "text": [
+        {
+          "text": "Deploy your first compute in 2 minutes.",
+          "font": "JetBrains Mono 700, #F4F3FF on #6B63FF",
+          "size_px": 64,
+          "fully_legible_from": 10.32,
+          "until": 12.25
+        },
+        {
+          "text": "from 3,999 RWF / month",
+          "font": "Instrument Serif italic 110 (ink) + JetBrains Mono 800 220 (3,999) + Mono 700 120 (RWF)",
+          "size_px": 220,
+          "fully_legible_from": 10.86,
+          "until": 12.3
+        },
+        {
+          "text": "pay with Mobile Money.",
+          "font": "Instrument Serif italic 110 (ink) + Inter 800 120 (paper) + ink period",
+          "size_px": 120,
+          "fully_legible_from": 11.28,
+          "until": 12.4
+        }
+      ],
+      "build_notes": [
+        "Budget ~60 min. Place EVERY glyph absolutely (x from the numbers above, or cumulative canvas measureText advances); never let text reflow while the weight changes.",
+        "Bars must end EXACTLY at the handoff rects: s06 starts from those numbers.",
+        "Use -webkit-text-stroke (HTML) or stroke on SVG <text> with paint-order: stroke fill for the fusion growth.",
+        "Verify: still --solo s05-spec-stack --times 10.15,10.35,10.7,10.9,11.3,12.2,12.36,12.49"
+      ]
+    },
+    {
+      "id": "s06-lockup",
+      "start": 12.5,
+      "end": 15.0,
+      "z": 8,
+      "purpose": "BRAND. Ink floods the gaps, the three fused bars spring into the exact logo slabs, and the period slides along the bottom slab to punch the LED hole. The real wordmark rises reading \"stretch cloud\" until the extra t drops in (the callback) and shoves \"ch cloud\" into place. The URL types on, one 16.4° sheen passes, and the frame holds dead still.",
+      "entry_state": "Identical to s05.exit_state at t = 12.500: a violet ground, three paper bars B1/B2/B3 and the ink dot at (1430.7, 838) r 12.",
+      "exit_state": "FINAL FRAME (14.500–15.000, absolutely static apart from engine grain): createLogo(root, {height: 224}) at left 309, top 428, scaled 1.012 about (960, 540). Mark x 309–547, y 428–651; wordmark x 607.76–1610.72, baseline 585.15, white; the real evenodd LED hole showing ink. \"cloud.strettch.com\" in JetBrains Mono 500, 44 px, #8982FF, x 607.76, baseline 651.3 (aligned with the mark’s bottom edge). No construction lines, caret or halo.",
+      "layers": [
+        "Violet halo rects (bottom), then three morph polygons and the ink dot, then the real createLogo lockup (slabs hidden until 13.100), then sparks, URL, optional construction lines and the sheen. The whole scene root takes the 13.50–14.50 push-in."
+      ],
+      "choreography": [
+        "12.500  DOWNBEAT BIG HIT (CA 0.8). INK FLOODS IN: the violet ground = union of B1, B2 and B3, each expanded by m(t) on every side, with m = 400·(1 − inQuad(progress(t, 12.50, 12.62))). Ink appears first at the frame edges and last in the mid-gaps; all violet is gone at 12.62.",
+        "12.540–13.040  B1 → TOP SLAB with slabSpring on each vertex (TL, TR, BR, BL). Targets: (309, 497.99) (547, 428) (546.47, 508.62) (309, 538.89).",
+        "12.560–13.060  B2 → MIDDLE SLAB. Targets: (309, 554.19) (546.71, 524.94) (545.81, 595.10) (309, 595.10).",
+        "12.580–13.080  B3 → BOTTOM SLAB. Targets: (309, 610.38) (501.64, 610.38) (501.64, 651.29) (309, 651.29). All three fills go #F4F3FF → #6B63FF over 12.60–12.85 (carry).",
+        "12.500–12.750  THE PERIOD RIDES THE BAR. The dot’s bilinear parameter on the B3/bottom quad goes (u, v) = (0.990, 0.864) → (0.1038, 0.5001) (carry); its radius goes 12 → 4.5.",
+        "12.750  PUNCH (half-beat): 12 #8982FF sparks (radius 0 → 40 px, size 3 → 0, 0.25 s) and a halo flash r 24 (opacity 0.8 → 0, 0.3 s). The dot keeps tracking the quad at (0.1038, 0.5001) and IS the hole (ink).",
+        "13.100  The morph polygons and the dot are replaced by the real createLogo slabs (identical geometry, spring residual < 0.3 px).",
+        "13.000–13.385  WORDMARK RISES through a HORIZONTAL mask edge at y 593 (5 px under the round bottoms at 587.8; letter 5 is not clipped). Letters 0–4 and 6–12 go translateY +130 px → 0 and skewX(−7.1°) → 0 about their own centres (reveal, 0.22 s), start 13.000 + 0.015·n in reading order (n = 0..11, skipping index 5). The staggered start makes the reveal travel as a 7.1° diagonal. Letters 6–12 carry a pre-offset of −60.34 px (−8.62 units), so the frame first reads \"stretch cloud\".",
+        "13.050–13.250  THE EXTRA T RETURNS (gravity drop #2). Letter 5 goes translateY −340 px → 0 (inQuad), fill #6B63FF, stretched to scaleY 1.15 in flight.",
+        "13.250  LAND (CA 0.2): squash scaleY 0.82 / scaleX 1.15 for 13.250–13.283, then squashBack. Fill goes #6B63FF → #FFFFFF over 13.25–13.60.",
+        "13.250–13.700  SHOVE: letters 6–12 x-offset = −60.34·(1 − shove(progress(t, 13.25, 13.70))). They overshoot +14 px at ~13.37 and settle below 2 px/frame by 13.50. The word now reads \"strettch cloud\".",
+        "13.250–13.430  The URL types on: \"cloud.strettch.com\", 18 chars at 10 ms each, JetBrains Mono 500, 44 px, #8982FF, x 607.76, baseline 651.3. A block caret (26 × 32 px, #8982FF) is removed at 13.450.",
+        "13.050–13.450  (Optional polish) Construction lines, 1 px #8982FF at 25% opacity, extend the top slab’s upper edge (16.4°) and the middle slab’s upper edge (7.1°) to the frame edges: draw 13.05–13.20, retract 13.30–13.45.",
+        "13.500–14.500  PUSH-IN: the scene root scales 1.000 → 1.012 about (960, 540) (drift).",
+        "14.000–14.400  SHEEN: a band (transparent → #FFFFFF at 45% → transparent, 140 px wide, long axis tilted 16.4° from vertical) sweeps its centre from x 250 → 1700 (carry), clipped to the mark and wordmark paths via <clipPath> <use>. 14.000–14.250: LED glow, an #8982FF disc in the hole plus a halo r 20 (opacity 0.7 → 0).",
+        "14.500–15.000  DEAD STILL. Nothing animates; the engine adds grain only."
+      ],
+      "text": [
+        {
+          "text": "strettch cloud",
+          "font": "createLogo() wordmark paths, height 224 (u 7), #FFFFFF",
+          "size_px": 224,
+          "fully_legible_from": 13.5,
+          "until": 15.0
+        },
+        {
+          "text": "cloud.strettch.com",
+          "font": "JetBrains Mono 500, #8982FF",
+          "size_px": 44,
+          "fully_legible_from": 13.47,
+          "until": 15.0
+        }
+      ],
+      "build_notes": [
+        "Budget ~60 min. The morph polygons are your own SVG paths; create the real createLogo at build() and just toggle visibility at 13.100.",
+        "Wordmark letter transforms are in logo units (px ÷ 7). The −60.34 px pre-offset is −8.62 units; the +14 px overshoot is +2.0 units.",
+        "Sheen clip: build an overlay <svg> with the same viewBox (0 0 186 32) and size at (309, 428). Its <clipPath> holds copies of window.SC_LOGO.markSlabs.* and letters[].d; draw the gradient band inside it.",
+        "The final lockup must be pristine: real mark, real wordmark, the real (unlit) LED hole, and nothing moving after 14.500.",
+        "Verify: still --solo s06-lockup --times 12.5,12.58,12.75,13.1,13.26,13.5,14.2,14.99"
+      ]
+    }
+  ],
+  "audio_cues": [
+    {
+      "time": 0.0,
+      "type": "whoosh",
+      "duration": 0.25,
+      "note": "Pickup beat. A soft air intake as the hairline draws out from the centre."
+    },
+    {
+      "time": 0.2,
+      "type": "tick",
+      "duration": 0.15,
+      "note": "Seven pencil-light ticks, 20 ms apart and rising in pitch, as \"stretch\" rises."
+    },
+    {
+      "time": 0.5,
+      "type": "sub-hit",
+      "duration": 0.9,
+      "note": "DOWNBEAT bar 1. The weight slam: kick plus a low \"thunk\" (140→42 Hz), intensity 0.8."
+    },
+    {
+      "time": 1.0,
+      "type": "riser-start",
+      "duration": 0.5,
+      "note": "Rubber-band creak: filtered noise plus a rising pitch glide as the word is pulled. Peaks at 1.50."
+    },
+    {
+      "time": 1.25,
+      "type": "whoosh",
+      "duration": 0.25,
+      "note": "The falling t: a downward Doppler whistle, pan centre."
+    },
+    {
+      "time": 1.5,
+      "type": "riser-peak",
+      "duration": 0.0,
+      "note": "The creak cuts dead on the impact."
+    },
+    {
+      "time": 1.5,
+      "type": "sub-hit",
+      "duration": 0.9,
+      "note": "The t impact (beat 3): kick, sub and snare crack. Intensity 1.0."
+    },
+    {
+      "time": 1.5,
+      "type": "pluck",
+      "duration": 1.2,
+      "note": "The hairline is plucked: Karplus-Strong ~98 Hz, brightness 0.5."
+    },
+    {
+      "time": 1.55,
+      "type": "whoosh",
+      "duration": 0.15,
+      "note": "Ink swipe for \"the extra push.\": bright, short, pan −0.3."
+    },
+    {
+      "time": 1.75,
+      "type": "tick",
+      "duration": 0.12,
+      "note": "Five light wood ticks, 20 ms apart, for \"cloud\" bouncing up."
+    },
+    {
+      "time": 2.5,
+      "type": "pulse-start",
+      "duration": 4.0,
+      "note": "DOWNBEAT bar 2. The bed: a muted bass pulse on 8ths (A1) with closed-hat ticks on 16ths."
+    },
+    {
+      "time": 2.5,
+      "type": "pad-change",
+      "duration": 4.0,
+      "note": "Tension pad, A minor add9 (A2 E3 B3 C4), slow attack."
+    },
+    {
+      "time": 2.75,
+      "type": "whoosh",
+      "duration": 0.12,
+      "note": "A reverse swipe as the annotation retracts."
+    },
+    {
+      "time": 3.0,
+      "type": "whoosh",
+      "duration": 0.35,
+      "note": "Camera pull-back: a wide air whoosh L→R."
+    },
+    {
+      "time": 3.0,
+      "type": "tick",
+      "duration": 0.3,
+      "note": "A marimba-like run: 8 descending ticks as \"strettch\" sinks, crossed with 12 ascending as \"Africa-first\" rises."
+    },
+    {
+      "time": 3.25,
+      "type": "click",
+      "duration": 0.05,
+      "note": "The period pops: a dry \"tok\"."
+    },
+    {
+      "time": 3.25,
+      "type": "whoosh",
+      "duration": 0.8,
+      "note": "A granular shimmer swelling outward as the continent assembles from Kigali."
+    },
+    {
+      "time": 3.5,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Kigali heartbeat ping (880 Hz sine blip)."
+    },
+    {
+      "time": 4.0,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Heartbeat ping."
+    },
+    {
+      "time": 4.0,
+      "type": "whoosh",
+      "duration": 0.5,
+      "note": "Packet launch: a Doppler pass panning centre → right-low."
+    },
+    {
+      "time": 4.5,
+      "type": "tick",
+      "duration": 0.05,
+      "note": "DOWNBEAT bar 3. The packet hits Cape Town: a dry tick impact on top of the bed kick."
+    },
+    {
+      "time": 4.5,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Heartbeat ping."
+    },
+    {
+      "time": 4.5,
+      "type": "tick",
+      "duration": 0.5,
+      "note": "Train: kicker type-on ticks (4.50–4.69), then odometer clicks on 32nds (4.55–5.00)."
+    },
+    {
+      "time": 5.0,
+      "type": "click",
+      "duration": 0.08,
+      "note": "The odometer locks at ~110: a bright bell-like click. Heartbeat ping."
+    },
+    {
+      "time": 5.25,
+      "type": "pluck",
+      "duration": 1.2,
+      "note": "The route is plucked (the 200 ms spike): a low detuned wire twang ~82 Hz."
+    },
+    {
+      "time": 5.25,
+      "type": "glitch",
+      "duration": 0.2,
+      "note": "A bit-crushed crunch under the spike."
+    },
+    {
+      "time": 5.5,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Heartbeat ping."
+    },
+    {
+      "time": 5.5,
+      "type": "riser-start",
+      "duration": 1.0,
+      "note": "Tension riser: a noise sweep plus a string-tension whine. Everything except the riser drops out at 6.483 (one-frame gap)."
+    },
+    {
+      "time": 6.0,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Last heartbeat ping."
+    },
+    {
+      "time": 6.5,
+      "type": "riser-peak",
+      "duration": 0.0,
+      "note": "Cut dead."
+    },
+    {
+      "time": 6.5,
+      "type": "pulse-stop",
+      "duration": 0.0,
+      "note": "The bed drops out for the snap."
+    },
+    {
+      "time": 6.5,
+      "type": "sub-hit",
+      "duration": 1.2,
+      "note": "DOWNBEAT bar 4, THE SNAP: the biggest sub drop of the film plus slapback. Intensity 1.2."
+    },
+    {
+      "time": 6.5,
+      "type": "pluck",
+      "duration": 0.8,
+      "note": "The rubber-band SNAP: a bright pluck with a fast pitch-down (~330 → 80 Hz)."
+    },
+    {
+      "time": 6.5,
+      "type": "whoosh",
+      "duration": 0.6,
+      "note": "Crash-zoom air rush, wide stereo."
+    },
+    {
+      "time": 6.93,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Slab 1 locks: a low tom-like click."
+    },
+    {
+      "time": 6.965,
+      "type": "click",
+      "duration": 0.05,
+      "note": "Slab 2, higher."
+    },
+    {
+      "time": 7.0,
+      "type": "click",
+      "duration": 0.06,
+      "note": "Slab 3 on the beat (highest) plus the LED chirp."
+    },
+    {
+      "time": 7.0,
+      "type": "pulse-start",
+      "duration": 5.5,
+      "note": "The release groove: kick on every beat, bass on 8ths (C2), hats on 16ths."
+    },
+    {
+      "time": 7.0,
+      "type": "pad-change",
+      "duration": 3.0,
+      "note": "The pad resolves to C major add9 (C3 G3 D4 E4), warm."
+    },
+    {
+      "time": 7.0,
+      "type": "tick",
+      "duration": 0.25,
+      "note": "Odometer roll-down: a descending click train on 32nds."
+    },
+    {
+      "time": 7.25,
+      "type": "click",
+      "duration": 0.06,
+      "note": "Lock thud, low and dry (\"10–30 ms\")."
+    },
+    {
+      "time": 8.5,
+      "type": "sub-hit",
+      "duration": 0.8,
+      "note": "DOWNBEAT bar 5. Cut to Rwanda: a sub \"whomp\", intensity 0.7."
+    },
+    {
+      "time": 8.62,
+      "type": "tick",
+      "duration": 0.12,
+      "note": "Four soft, low-passed rubbery bumps as the glyphs hit the border."
+    },
+    {
+      "time": 9.75,
+      "type": "riser-start",
+      "duration": 0.25,
+      "note": "A reverse cymbal into the fly-through."
+    },
+    {
+      "time": 9.875,
+      "type": "whoosh",
+      "duration": 0.15,
+      "note": "Fly-through air rush."
+    },
+    {
+      "time": 10.0,
+      "type": "riser-peak",
+      "duration": 0.0,
+      "note": "Cut on the colour flip."
+    },
+    {
+      "time": 10.0,
+      "type": "pad-change",
+      "duration": 2.5,
+      "note": "Brighter voicing on violet: F major 7 (F3 A3 C4 E4)."
+    },
+    {
+      "time": 10.0,
+      "type": "tick",
+      "duration": 0.3,
+      "note": "Teletype clicks for line 1 (39 ticks)."
+    },
+    {
+      "time": 10.5,
+      "type": "sub-hit",
+      "duration": 0.5,
+      "note": "DOWNBEAT bar 6, light (intensity 0.4)."
+    },
+    {
+      "time": 10.625,
+      "type": "tick",
+      "duration": 0.04,
+      "note": "Drum lock \"3\": a mechanical clack."
+    },
+    {
+      "time": 10.6875,
+      "type": "tick",
+      "duration": 0.04,
+      "note": "Drum lock \"9\" (pitch −1 semitone)."
+    },
+    {
+      "time": 10.75,
+      "type": "tick",
+      "duration": 0.04,
+      "note": "Drum lock \"9\" (−2)."
+    },
+    {
+      "time": 10.8125,
+      "type": "tick",
+      "duration": 0.04,
+      "note": "Drum lock \"9\" (−3)."
+    },
+    {
+      "time": 11.0,
+      "type": "glitch",
+      "duration": 0.19,
+      "note": "Phone buzz: three sub-bass pulses on 32nds (11.0625 / 11.125 / 11.1875)."
+    },
+    {
+      "time": 11.25,
+      "type": "click",
+      "duration": 0.05,
+      "note": "The period pops."
+    },
+    {
+      "time": 11.5,
+      "type": "riser-start",
+      "duration": 1.0,
+      "note": "A snare roll going 16ths → 32nds under a rising filter."
+    },
+    {
+      "time": 12.25,
+      "type": "glitch",
+      "duration": 0.25,
+      "note": "A compressed crunch as the lines fuse."
+    },
+    {
+      "time": 12.5,
+      "type": "riser-peak",
+      "duration": 0.0,
+      "note": "Cut."
+    },
+    {
+      "time": 12.5,
+      "type": "sub-hit",
+      "duration": 1.2,
+      "note": "DOWNBEAT bar 7, the big lockup hit: kick, sub and crash as ink floods in. Intensity 1.0."
+    },
+    {
+      "time": 12.5,
+      "type": "pulse-stop",
+      "duration": 0.0,
+      "note": "The groove goes out; the lockup breathes."
+    },
+    {
+      "time": 12.5,
+      "type": "pad-change",
+      "duration": 2.0,
+      "note": "Open C major (C3 G3 E4)."
+    },
+    {
+      "time": 12.75,
+      "type": "click",
+      "duration": 0.05,
+      "note": "LED punch: a crisp click."
+    },
+    {
+      "time": 12.75,
+      "type": "tick",
+      "duration": 0.2,
+      "note": "Spark tinkle: 3 high ticks."
+    },
+    {
+      "time": 13.0,
+      "type": "whoosh",
+      "duration": 0.2,
+      "note": "The wordmark rises: a soft air swipe."
+    },
+    {
+      "time": 13.25,
+      "type": "pluck",
+      "duration": 0.5,
+      "note": "Callback to the 1.50 impact as the extra t lands: the same pluck an octave up and softer, plus a \"tok\"."
+    },
+    {
+      "time": 13.25,
+      "type": "tick",
+      "duration": 0.18,
+      "note": "URL type ticks (18)."
+    },
+    {
+      "time": 14.0,
+      "type": "sting",
+      "duration": 1.0,
+      "note": "Bell (FM, E5) plus a shimmer for the sheen and the LED blink."
+    },
+    {
+      "time": 14.5,
+      "type": "pad-change",
+      "duration": 0.5,
+      "note": "DOWNBEAT bar 8, final resolve: C5 added on top. Everything decays to silence exactly at 15.000."
+    }
+  ],
+  "camera_shake_and_ca_hits": [
+    {
+      "time": 1.5,
+      "intensity": 0.6
+    },
+    {
+      "time": 6.5,
+      "intensity": 1.0
+    },
+    {
+      "time": 7.0,
+      "intensity": 0.3
+    },
+    {
+      "time": 8.5,
+      "intensity": 0.4
+    },
+    {
+      "time": 12.5,
+      "intensity": 0.8
+    },
+    {
+      "time": 13.25,
+      "intensity": 0.2
+    }
+  ],
+  "readability_check": "| text                                    | scene | px     | legible from | until | window s | words | required s | key | result |\n|-----------------------------------------|-------|--------|--------------|-------|----------|-------|------------|-----|--------|\n| stretch                                 | s01   | 220    | 0.48         | 1.07  | 0.59     | 1     | 0.5        |     | OK     |\n| the extra push.                         | s01   | 64     | 1.85         | 2.75  | 0.9      | 3     | 0.9        |     | OK     |\n| strettch cloud (wordmark)               | s01   | 352h   | 2.2          | 3.0   | 0.8      | 2     | 0.7        |     | OK     |\n| Africa-first cloud.                     | s01   | 160    | 3.3          | 4.5   | 1.2      | 2     | 1.2        | KEY | OK     |\n| Cape Town · nearest hyperscaler region  | s02   | 34     | 4.72         | 6.5   | 1.78     | 5     | 1.3        |     | OK     |\n| ~110 ms per request                     | s02   | 200/40 | 5.1          | 6.5   | 1.4      | 4     | 1.2        | KEY | OK     |\n| peaks at 200 ms                         | s02   | 36     | 5.37         | 6.5   | 1.13     | 4     | 1.1        |     | OK     |\n| Strettch Cloud · Kigali-1               | s03   | 34     | 7.27         | 8.5   | 1.23     | 3     | 0.9        |     | OK     |\n| 10–30 ms                                | s03   | 200    | 7.3          | 8.5   | 1.2      | 2     | 1.2        | KEY | OK     |\n| Data stays in-country.                  | s04   | 130    | 8.96         | 9.875 | 0.915    | 3     | 0.9        |     | OK     |\n| Deploy your first compute in 2 minutes. | s05   | 64     | 10.32        | 12.25 | 1.93     | 7     | 1.7        | KEY | OK     |\n| from 3,999 RWF / month                  | s05   | 220    | 10.86        | 12.3  | 1.44     | 4     | 1.2        | KEY | OK     |\n| pay with Mobile Money.                  | s05   | 120    | 11.28        | 12.4  | 1.12     | 4     | 1.1        |     | OK     |\n| strettch cloud (lockup)                 | s06   | 224h   | 13.5         | 15.0  | 1.5      | 2     | 0.7        |     | OK     |\n| cloud.strettch.com                      | s06   | 44     | 13.47        | 15.0  | 1.53     | 1     | 0.5        |     | OK     |\n\nRules applied: a string counts as legible only once settled (<2 px/frame, spring residual included) and clear of CA (CA clears 0.1167·ln(I/0.03) s after a hit). The minimum is 0.5 s for one word plus 0.2 s per extra word; key lines need at least 1.2 s. All 15 reads: PASS.\nTotal on-screen words ≈ 47 (budget 50). New strings per 1 s window: at most 3 (worst windows are [1.5, 2.5): strettch / the extra push. / cloud, and [4.5, 5.5): kicker / ~110 ms per request / peaks at 200 ms).\nHits vs reads: 1.50 (0.6) clears at 1.85, before \"the extra push.\" opens. 6.50 (1.0) ends the far reads exactly. 7.00 (0.3) clears at 7.27, before \"10–30 ms\" opens at 7.30. 8.50 (0.4) clears at 8.80, before 8.96. 12.50 (0.8) clears at 12.88, with no reads until 13.47. 13.25 (0.2) clears at 13.47, the URL read start.\nSmallest type: 34 px (kickers). Title-safe x 96–1824 / y 54–1026 is respected by every string (leftmost x 131.3, rightmost x 1740.1, topmost glyph y ≈ 283, lowest baseline 850)."
+}
