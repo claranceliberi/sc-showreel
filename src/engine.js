@@ -378,17 +378,26 @@ window.SC = (() => {
   // Global post: camera shake + chromatic aberration hits, grain, vignette
   // ------------------------------------------------------------------------------------------
   const post = {
-    // [{ time, intensity 0..1 }] — filled in by src/post-config.js from the storyboard.
+    // [{ time, intensity 0..1, aberration 0..1 }] — filled in by src/post-config.js. `intensity`
+    // drives camera shake; `aberration` drives the RGB split separately, because a split strong
+    // enough to feel like an impact also fringes any logo or type that lands on the same beat.
     hits: [],
     shakeDecay: 0.35, // seconds until a hit's shake has mostly died out
     grainOpacity: 0.07,
+    // Keyframes [[time, opacity], ...] for the vignette. It is tuned for the ink background and
+    // turns flat brand violet muddy, so post-config dims it over the violet sections.
+    vignette: [[0, 1]],
+    // Render-only: spans that need more motion-blur samples than the default (read by
+    // render/render.mjs). [{ from, to, subframes }] in global seconds.
+    motionBlurWindows: [],
   }
-  function hitEnvelope(time) {
+  function hitEnvelope(time, field) {
     let strongest = 0
     for (const hit of post.hits) {
       if (time < hit.time) continue
       const elapsed = time - hit.time
-      strongest = Math.max(strongest, hit.intensity * Math.exp(-elapsed / (post.shakeDecay / 3)))
+      const amount = field === 'aberration' ? hit.aberration ?? hit.intensity : hit.intensity
+      strongest = Math.max(strongest, amount * Math.exp(-elapsed / (post.shakeDecay / 3)))
     }
     return strongest
   }
@@ -397,6 +406,7 @@ window.SC = (() => {
   let grainCanvas
   let grainTiles = []
   let caFilterOffsets
+  let vignette
   let soloId = null
 
   function buildGrainTiles() {
@@ -423,13 +433,14 @@ window.SC = (() => {
   function renderPost(time) {
     const frameIndex = Math.floor(time * FPS)
     // Shake: two noise channels per axis, scaled by the decaying hit envelope.
-    const envelope = hitEnvelope(time)
+    const envelope = hitEnvelope(time, 'intensity')
     const shakeX = noise(time * 38, 11) * 14 * envelope
     const shakeY = noise(time * 41, 23) * 10 * envelope
     const shakeRotate = noise(time * 29, 37) * 0.35 * envelope
     setStyle(stage, { transform: `translate(${round(shakeX, 2)}px, ${round(shakeY, 2)}px) rotate(${round(shakeRotate, 3)}deg)` })
     // Chromatic aberration: split R and B channels horizontally while a hit is fresh.
-    const aberration = envelope > 0.03 ? envelope * 9 : 0
+    const aberrationEnvelope = hitEnvelope(time, 'aberration')
+    const aberration = aberrationEnvelope > 0.03 ? aberrationEnvelope * 9 : 0
     if (aberration > 0) {
       caFilterOffsets.red.setAttribute('dx', round(aberration, 2))
       caFilterOffsets.blue.setAttribute('dx', round(-aberration, 2))
@@ -437,6 +448,7 @@ window.SC = (() => {
     } else {
       setStyle(stage, { filter: 'none' })
     }
+    setStyle(vignette, { opacity: String(round(keyframes(time, post.vignette), 3)) })
     // Grain: pick a tile per frame and jitter its offset so the texture boils at 60 fps.
     const context = grainCanvas.getContext('2d')
     const tile = grainTiles[frameIndex % grainTiles.length]
@@ -460,7 +472,7 @@ window.SC = (() => {
       </filter>`
     const offsets = defs.querySelectorAll('feOffset')
     caFilterOffsets = { red: offsets[0], blue: offsets[1] }
-    el('div', { className: 'sc-vignette' }, frame)
+    vignette = el('div', { className: 'sc-vignette' }, frame)
     grainCanvas = el('canvas', { className: 'sc-grain', attrs: { width: WIDTH, height: HEIGHT } }, frame)
     grainCanvas.style.opacity = post.grainOpacity
     buildGrainTiles()
