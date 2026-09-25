@@ -1,5 +1,12 @@
 # One More T — Strettch Cloud, 15 s showreel (locked storyboard v1)
 
+> **Status:** this is the locked v1 storyboard the scenes were first built from. After the cut-v1
+> review (craft + QA critiques) several beats were re-timed and re-staged — most notably the snap
+> (strain 5.0–6.48, whip at Z≈1 6.50–6.75, crash-zoom 6.75–7.10, slabs/roll from 7.125), the
+> s05 fuse (bar wipes instead of glyph dilation) and s04's real 10m Rwanda border. The source of
+> truth for timing is now the code: `src/scenes/shared-map.js` (`TIME` table for s02/s03), each
+> scene file, `src/post-config.js` and `render/audio.mjs`.
+
 _The word "stretch" is pulled until it tears; the extra violet t drops into the gap and the word becomes the real strettch cloud wordmark. Its violet period becomes Kigali, and a request stretches to the nearest hyperscaler region in Cape Town and back (~110 ms). The route trembles like a rubber band until it SNAPS home on the 6.50 downbeat: the camera crash-zooms into Rwanda, the logo slabs lock onto Kigali-1 and the same odometer rolls down to 10–30 ms. Data stays inside Rwanda’s border, the camera flies through the violet fill into a three-line spec sheet, and those lines fuse into the three slabs of the mark. The extra t drops into the wordmark one last time._
 
 **Format:** 15.000 s · 1920×1080 · 60 fps · 120 BPM. Bar downbeats fall at **0.5, 2.5, 4.5, 6.5, 8.5, 10.5, 12.5, 14.5** (0.0–0.5 is a one-beat pickup). Final render: `node render/render.mjs video --subframes 8 --shutter 0.5 --audio out/audio.wav`. `storyboard/master.json` is the machine-readable contract; this file is the same storyboard written for people.

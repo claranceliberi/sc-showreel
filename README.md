@@ -9,6 +9,7 @@ accumulation), with a synthesized sound-design track.
 ```bash
 npm install
 node tools/build-assets.mjs          # geo outlines, brand logo glyphs, fonts → src/data, assets/fonts
+node tools/build-rwanda.mjs          # 10m Rwanda border + neighbour dot grid → src/data/rwanda-hires.js (~25 s)
 node render/audio.mjs                # soundtrack → out/audio.wav
 node render/render.mjs video --audio out/audio.wav --out out/strettch-cloud-showreel.mp4
 ```
@@ -21,7 +22,7 @@ Open `index.html` through any static server (`npx serve .`) for a live preview w
 | --- | --- |
 | `node render/render.mjs still --times 1.2,3.4 [--solo <scene-id>] [--outdir out/stills]` | Full-res PNGs at exact times |
 | `node render/render.mjs sheet --from 2 --to 5 --count 12 [--solo <scene-id>] --out out/sheet.png` | Time-stamped contact sheet |
-| `node render/render.mjs video [--from 0 --to 15] [--subframes 4] [--shutter 0.5] [--scale 0.5] [--workers 3]` | MP4 with motion blur |
+| `node render/render.mjs video [--from 0 --to 15] [--subframes 8] [--shutter 0.5] [--workers 3] [--no-windows 1]` | MP4 with motion blur; spans in `SC.post.motionBlurWindows` get more samples |
 
 `--solo <scene-id>` renders one scene alone (still at global time) for isolated checks.
 
