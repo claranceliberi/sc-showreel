@@ -16,6 +16,13 @@
 //     └ Inter 800 "Africa-first" glyphs (clipped to plane y < 606)
 //
 // Ownership: s01 never draws the period / Kigali dot (s02 owns it from 3.250).
+// The storyboard exits "Africa-first cloud" at 4.50, but with the slow-start swift ease it stayed
+// printed over s02's rising "~110" odometer (same baseline) until ~4.70. Exiting from 4.38 clears
+// the baseline by ~4.57 and still leaves the line >1 s of settled reading time (3.30–4.38).
+const EXIT_START = 4.38
+const EXIT_STAGGER = 0.003
+const EXIT_DURATION = 0.14
+
 SC.scene({
   id: 's01-stretch',
   start: 0.0,
@@ -280,11 +287,11 @@ SC.scene({
         if (tau >= 0 && tau <= 0.12) dy -= 14 * Math.sin((Math.PI * tau) / 0.12)
         dy += sink(3.0 + 0.015 * index, 0.15)
       } else {
-        // "cloud" bounces up (light glyphs), then sinks with "Africa-first" at 4.50.
+        // "cloud" bounces up (light glyphs), then sinks with "Africa-first" at EXIT_START.
         const order = 12 + (index - 8)
-        visible = t >= 1.75 && t < 4.5 + 0.005 * order + 0.15
+        visible = t >= 1.75 && t < EXIT_START + EXIT_STAGGER * order + EXIT_DURATION
         const start = 1.75 + 0.02 * (index - 8)
-        dy = tween(t, start, start + 0.5, DEPTH, 0, s.springs.lightBounce) + sink(4.5 + 0.005 * order, 0.15)
+        dy = tween(t, start, start + 0.5, DEPTH, 0, s.springs.lightBounce) + sink(EXIT_START + EXIT_STAGGER * order, EXIT_DURATION)
       }
       transforms[index] = { dx, dy, scaleX, scaleY }
       show(letter.path, visible)
@@ -321,10 +328,10 @@ SC.scene({
 
     // ---- (e) "Africa-first" 3.00–4.73 (rise starts: see the chase in build) --------------------
     s.africaGlyphs.forEach(({ node, x, riseStart }, index) => {
-      const visible = t >= riseStart && t < 4.5 + 0.005 * index + 0.15
+      const visible = t >= riseStart && t < EXIT_START + EXIT_STAGGER * index + EXIT_DURATION
       show(node, visible)
       if (!visible) return
-      const y = BASELINE + rise(riseStart, 0.16) + sink(4.5 + 0.005 * index, 0.15)
+      const y = BASELINE + rise(riseStart, 0.16) + sink(EXIT_START + EXIT_STAGGER * index, EXIT_DURATION)
       setAttrs(node, { transform: `translate(${r3(x)} ${r3(y)})` })
     })
   },
