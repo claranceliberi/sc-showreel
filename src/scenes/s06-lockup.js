@@ -1,8 +1,14 @@
 // s06-lockup · 12.500–15.000 · z 8 — BRAND.
 // Ink floods the gaps, the three fused bars spring into the exact logo slabs, the period rides
-// the bottom bar and punches the LED hole. The real wordmark rises reading "stretch cloud" until
-// the extra t drops in and shoves "ch cloud" over. The URL types on, one 16.4° sheen passes, and
-// from 14.500 the frame is dead still (only the engine grain moves).
+// the bottom bar and punches the LED hole (one halo flash + one thin ring). On that punch the real
+// wordmark rises, reading "stretch cloud", while the slabs settle; the extra t drops in, and as its
+// foot enters the x-height it shoves "ch cloud" over. The URL types on, one 16.4° sheen passes,
+// and from 14.500 the frame is dead still (only the engine grain moves).
+//
+// Event times (global s): 12.750 LED punch + wordmark rise starts (last letter settles 13.135) ·
+// 13.000 t drop starts · 13.217 shove starts · 13.250 t lands (squash, engine hit) · URL types
+// 13.250–13.433, caret off 13.450 · 13.500–14.500 push-in · 14.000–14.400 sheen, LED blink to
+// 14.250 · 14.500 dead still.
 //
 // Everything below is a closed-form function of global t. Screen-space layers use stage px; the
 // createLogo() lockup (height 224 → u = 7 px per logo unit) and its sheen overlay use logo units.
@@ -10,14 +16,16 @@
   const START = 12.5
   const END = 15.0
 
-  // Lockup placement: createLogo({height: 224}) at left 309 (storyboard) and top 418 — the
-  // storyboard's bbox-centred top 428 lifted 10 px. Measured on the final frame, the lockup's
-  // luminance centroid sat 7 px BELOW frame centre (the mark's peak is a point, the base is flat and
-  // carries the URL); lifted, it sits 3 px above: the optical centre. Every s06 position below
-  // (slab targets, LED, mask edge, URL, sheen) is derived from LOGO_X / LOGO_Y.
+  // Lockup placement: createLogo({height: 224}) at left 309 (storyboard) and top 416 — the
+  // storyboard's top 428 lifted 12 px. The URL hangs 24 px under the mark, so the whole lockup
+  // (mark peak → URL baseline) spans y 416–664 before the push-in: its bbox is centred on the
+  // frame (540) and its luminance centroid sits ~3 px above centre, the optical centre (the mark's
+  // peak is a point, the base is flat and carries the URL). Horizontally the ink runs 309–1610.7
+  // (centre 959.9). Every s06 position below (slab targets, LED, mask edge, URL, sheen) is derived
+  // from LOGO_X / LOGO_Y.
   const U = 7
   const LOGO_X = 309
-  const OPTICAL_LIFT = 10
+  const OPTICAL_LIFT = 12
   const LOGO_Y = 428 - OPTICAL_LIFT
   const toScreen = ([x, y]) => [LOGO_X + U * x, LOGO_Y + U * y]
 
@@ -30,7 +38,7 @@
   }
   // The evenodd LED hole in the bottom slab (bounds 2.17773–3.53809 × 28.3613–29.5918).
   const LED = { cx: 2.85791, cy: 28.97655, rx: 0.68018, ry: 0.61525 }
-  const LED_PX = toScreen([LED.cx, LED.cy]) // (329.005, 620.836)
+  const LED_PX = toScreen([LED.cx, LED.cy]) // (329.005, 618.836)
 
   // s05 exit rects (x0, y0, x1, y1) → slab, each with its own spring start.
   const BARS = [
@@ -47,28 +55,53 @@
   const RISE_DEPTH = 130 / U // units
   const RISE_SKEW = -7.1
   const RISE_DURATION = 0.22
-  const RISE_START = 13.0
+  // The rise fires on the LED punch (12.750, half-beat) so the word comes up while the slabs are
+  // still settling: no empty-frame stall between the mark and the name. Letter n starts at
+  // 12.750 + 0.015·n (n = 0..11); the last one settles at 13.135.
+  const RISE_START = 12.75
   const RISE_EACH = 0.015
   const MASK_EDGE_UNITS = (593 - 428) / U // 23.571 u: the storyboard's y 593 edge, 5 px under the round bottoms
   const PRE_OFFSET = -60.34 / U // letters 6–12 start where the missing t would be: "stretch cloud"
   const DROP_START = 13.0
-  const DROP_LAND = 13.25
+  const DROP_LAND = 13.25 // locked: the audio hit and the engine shake sit on this frame
   const DROP_HEIGHT = -600 / U // starts fully above the frame (see deviation notes)
-  const SQUASH_END = 13.25 + 2 / 60
-  const SHOVE_START = 13.25
+  const SQUASH_END = DROP_LAND + 2 / 60
+  // The falling t's foot crosses the x-height line (11.21 u) at 13.233, one frame before it lands.
+  // The shove starts on the frame before that contact (13.217, frame 793) with an impulse (initial
+  // velocity 40/s), so "ch cloud" is already 93% of the way over on the landing frame (the squashed
+  // t clears the c by ~6 px) instead of starting from rest on it, which printed the t over the c
+  // for three frames. zeta 0.66: +12 px overshoot at 13.283, < 2 px/frame from 13.383, < 1e-6 px
+  // by 14.22.
+  const SHOVE_START = 13 + 13 / 60
+  const SHOVE_SPRING = { stiffness: 1000, damping: 42, mass: 1, velocity: 40 }
   const TAIL = 1.0 // springs evaluated for 1 s of real time so they settle to < 0.001 px before 14.5
 
-  // URL.
+  // LED punch (12.750): one restrained halo flash and one thin ring, both riding the live hole
+  // while the bottom slab finishes its spring.
+  const PUNCH = 12.75
+  const PUNCH_HALO_RADIUS = 22
+  const PUNCH_HALO_PEAK = 0.55
+  const PUNCH_HALO_END = 13.0
+  const PUNCH_RING_FROM = 6.5 // px: just outside the 4.8 × 4.3 px hole
+  const PUNCH_RING_TO = 30
+  const PUNCH_RING_WIDTH = 1.5
+  const PUNCH_RING_PEAK = 0.75
+  const PUNCH_RING_END = 13.0
+
+  // URL: JetBrains Mono 500 at 44 px, natural tracking (0.6 em = 26.4 px advance), ink flush with
+  // the wordmark's s. It hangs from the mark: its x-height line sits on the mark's bottom edge, so
+  // the lowercase body starts exactly where the mark ends.
   const URL_TEXT = 'cloud.strettch.com'
-  const URL_BASELINE = LOGO_Y + 223.3 // on the mark's bottom edge (storyboard 651.3, lifted: 641.3)
-  const URL_INK_LEFT = LOGO_X + U * 42.68 // 607.76 — the wordmark's s
+  const URL_SIZE = 44
+  const URL_TRACKING = 0 // em
+  const URL_X_HEIGHT = 0.55 * URL_SIZE // JetBrains Mono x-height 550/1000 em
+  const MARK_BOTTOM = LOGO_Y + U * 31.8984
+  const URL_BASELINE = MARK_BOTTOM + URL_X_HEIGHT
+  const URL_INK_LEFT = LOGO_X + U * 42.68 // the wordmark's s
   const URL_START = 13.25
   const URL_EACH = 0.01
   const CARET_OFF = 13.45
-  // Tracking is solved in build() so the URL's ink runs exactly from the s to the h of
-  // "strettch" (607.76 → 1171.33): the URL justifies under the name and "cloud" hangs clear.
-  // Natural mono advance is 26.4 px; the solved advance is ≈ 31.9 px (+0.125 em).
-  const URL_INK_RIGHT = LOGO_X + U * 123.19
+  const FPS = 60 // typing and caret are quantised to whole frames so motion-blur sub-samples agree
 
   // Sheen + LED.
   const SHEEN_START = 14.0
@@ -207,7 +240,7 @@
       const sheenGroup = svg('g', { 'clip-path': 'url(#s06-sheen-clip)' }, sheen)
       const sheenBand = svg('rect', { x: -SHEEN_WIDTH / 2, y: -40, width: SHEEN_WIDTH, height: 80, fill: 'url(#s06-sheen-grad)' }, sheenGroup)
 
-      // ---- Light layer (stage px, screen-blended so light always ADDS): punch halo, sparks and
+      // ---- Light layer (stage px, screen-blended so light always ADDS): punch halo, punch ring and
       // the LED halo read brighter than the violet slab they sit on instead of dissolving into it.
       const glowLayer = el('div', { style: { position: 'absolute', left: '0px', top: '0px', width: '1920px', height: '1080px', mixBlendMode: 'screen' } }, world)
       const glow = place(svg('svg', { width: 1920, height: 1080, viewBox: '0 0 1920 1080' }, glowLayer), 0, 0)
@@ -236,26 +269,17 @@
       }
       const punchHalo = makeHalo()
       const ledHalo = makeHalo()
+      const punchRing = svg('circle', { fill: 'none', stroke: COLORS.violetLight }, glow)
 
-      const random = api.rng(606)
-      // Irregular spacing, reach and launch so the burst reads as sparks, not as an icon.
-      const sparks = Array.from({ length: 12 }, (_, index) => ({
-        angle: ((index + 0.5) / 12) * Math.PI * 2 + (random() - 0.5) * 0.42,
-        reach: 0.7 + random() * 0.45,
-        delay: random() * 0.025,
-        node: svg('line', { stroke: COLORS.violetLight, 'stroke-linecap': 'round' }, glow),
-      }))
-
-      // URL: one <text> per character on a fixed (tracked) mono grid, with the first glyph's INK
-      // (not its advance box) on the wordmark's s and the last glyph's ink on the h of "strettch".
+      // URL: one <text> per character on the natural mono grid (so it can type on cell by cell),
+      // with the first glyph's INK (not its advance box) flush with the wordmark's s.
       const measure = document.createElement('canvas').getContext('2d')
-      measure.font = `500 44px ${tokens.fonts.mono}`
+      measure.font = `500 ${URL_SIZE}px ${tokens.fonts.mono}`
       const firstInkOffset = -measure.measureText(URL_TEXT[0]).actualBoundingBoxLeft
-      const lastInkRight = measure.measureText(URL_TEXT[URL_TEXT.length - 1]).actualBoundingBoxRight
-      const urlOrigin = URL_INK_LEFT - firstInkOffset
-      const advance = (URL_INK_RIGHT - lastInkRight - urlOrigin) / (URL_TEXT.length - 1)
       const naturalAdvance = measure.measureText(URL_TEXT).width / URL_TEXT.length
-      const urlGroup = svg('g', { fill: COLORS.violetLight, 'font-family': tokens.fonts.mono, 'font-weight': 500, 'font-size': 44 }, front)
+      const advance = naturalAdvance + URL_TRACKING * URL_SIZE
+      const urlOrigin = URL_INK_LEFT - firstInkOffset
+      const urlGroup = svg('g', { fill: COLORS.violetLight, 'font-family': tokens.fonts.mono, 'font-weight': 500, 'font-size': URL_SIZE }, front)
       const urlGlyphs = [...URL_TEXT].map((character, index) => {
         const node = svg('text', { x: (urlOrigin + advance * index).toFixed(3), y: URL_BASELINE }, urlGroup)
         node.textContent = character
@@ -265,8 +289,8 @@
 
       return {
         world, bars, halos, polygons, dot, dotStreak, dotFrom, dotTo, constructionLines,
-        logo, extraT, ledDisc, sheenBand, punchHalo, ledHalo, sparks,
-        urlGlyphs, urlOrigin, advance, naturalAdvance, caret,
+        logo, extraT, ledDisc, sheenBand, punchHalo, ledHalo, punchRing,
+        urlGlyphs, urlOrigin, advance, caret,
       }
     },
 
@@ -274,7 +298,7 @@
       const { ease, progress, tween, setStyle, setAttrs, round } = api
       const carry = ease.inOutCubic
       const slabSpring = ease.spring({ stiffness: 600, damping: 34, mass: 1, duration: SPRING_WINDOW })
-      const shove = ease.spring({ stiffness: 700, damping: 22, mass: 1, duration: TAIL })
+      const shove = ease.spring({ ...SHOVE_SPRING, duration: TAIL })
       const squashBack = ease.spring({ stiffness: 900, damping: 21, mass: 1, duration: TAIL })
       const show = (node, visible) => setStyle(node, { display: visible ? 'inline' : 'none' })
 
@@ -330,26 +354,9 @@
       }
       show(state.dotStreak, streakVisible)
 
-      // ---- 12.750 PUNCH: sparks and a halo flash. The bottom slab is still settling, so the
-      // flash tracks the hole live and the sparks launch from where the hole was at 12.750.
+      // ---- 12.750 PUNCH: one halo flash and one thin expanding ring. The bottom slab is still
+      // settling (~9 px of spring overshoot left), so both ride the live hole and stay concentric.
       const holeNow = morphing ? dotAt(t).position : LED_PX
-      const [originX, originY] = dotAt(12.75).position
-      const sparksLive = t >= 12.75 && t < 13.03
-      for (const spark of state.sparks) {
-        const sparkProgress = progress(t, 12.75 + spark.delay, 13.0 + spark.delay)
-        const live = sparksLive && t >= 12.75 + spark.delay && sparkProgress < 1
-        show(spark.node, live)
-        if (!live) continue
-        const head = 40 * spark.reach * ease.outCubic(sparkProgress)
-        const tail = 40 * spark.reach * ease.outCubic(Math.max(0, sparkProgress - 0.14))
-        const dx = Math.cos(spark.angle)
-        const dy = Math.sin(spark.angle)
-        setAttrs(spark.node, {
-          x1: round(originX + dx * (6 + tail), 3), y1: round(originY + dy * (6 + tail), 3),
-          x2: round(originX + dx * (6 + head), 3), y2: round(originY + dy * (6 + head), 3),
-          'stroke-width': round(3 * (1 - sparkProgress), 3),
-        })
-      }
       const setHalo = (node, [x, y], radius, opacity) => {
         const visible = opacity > 0.001
         setStyle(node, { display: visible ? 'block' : 'none' })
@@ -359,7 +366,19 @@
           opacity: round(opacity, 4),
         })
       }
-      setHalo(state.punchHalo, holeNow, 24, t >= 12.75 ? 0.8 * (1 - progress(t, 12.75, 13.05)) : 0)
+      const haloFade = 1 - progress(t, PUNCH, PUNCH_HALO_END)
+      setHalo(state.punchHalo, holeNow, PUNCH_HALO_RADIUS, t >= PUNCH ? PUNCH_HALO_PEAK * haloFade * haloFade : 0)
+      const ringProgress = progress(t, PUNCH, PUNCH_RING_END)
+      const ringLive = t >= PUNCH && ringProgress < 1
+      show(state.punchRing, ringLive)
+      if (ringLive) {
+        setAttrs(state.punchRing, {
+          cx: round(holeNow[0], 3), cy: round(holeNow[1], 3),
+          r: round(PUNCH_RING_FROM + (PUNCH_RING_TO - PUNCH_RING_FROM) * ease.outCubic(ringProgress), 3),
+          'stroke-width': round(PUNCH_RING_WIDTH * (1 - 0.5 * ringProgress), 3),
+          'stroke-opacity': round(PUNCH_RING_PEAK * Math.pow(1 - ringProgress, 1.5), 4),
+        })
+      }
 
       // ---- 13.100: the real slabs take over from the morph polygons.
       setStyle(state.logo.markGroup, { visibility: morphing ? 'hidden' : 'visible' })
@@ -376,7 +395,8 @@
         })
       }
 
-      // ---- Wordmark rises through the y 593 edge, reading "stretch cloud" at first.
+      // ---- Wordmark rises through the mask edge (storyboard y 593, lifted with the lockup) from
+      // 12.750, reading "stretch cloud" at first.
       const shoveAmount = tween(t, SHOVE_START, SHOVE_START + TAIL, 0, 1, shove)
       state.logo.letters.forEach((letter, index) => {
         if (index === 5) return
@@ -418,12 +438,16 @@
       })
       setAttrs(t5, { fill: mixColor(COLORS.violet, COLORS.white, carry(progress(t, 13.25, 13.6))) })
 
-      // ---- URL types on (10 ms per character) with a block caret until 13.450.
-      const typed = t < URL_START ? 0 : Math.min(URL_TEXT.length, Math.floor((t - URL_START) / URL_EACH + 1e-6) + 1)
+      // ---- URL types on (10 ms per character) with a block caret until 13.450. Count and caret
+      // come from the frame index, not raw t: every motion-blur sub-sample of a frame then agrees
+      // on the same cell, so the caret can no longer smear across two cells as a double caret.
+      const frame = Math.round(t * FPS)
+      const firstFrame = Math.round(URL_START * FPS)
+      const typed = frame < firstFrame ? 0 : Math.min(URL_TEXT.length, Math.floor((frame - firstFrame) / (FPS * URL_EACH) + 1e-6) + 1)
       state.urlGlyphs.forEach((node, index) => setStyle(node, { visibility: index < typed ? 'visible' : 'hidden' }))
-      const caretLive = t >= URL_START && t < CARET_OFF
+      const caretLive = frame >= firstFrame && frame < Math.round(CARET_OFF * FPS)
       show(state.caret, caretLive)
-      if (caretLive) setAttrs(state.caret, { x: round(state.urlOrigin + state.advance * typed + (state.naturalAdvance - 26) / 2, 3) })
+      if (caretLive) setAttrs(state.caret, { x: round(state.urlOrigin + state.advance * typed + (state.advance - 26) / 2, 3) })
 
       // ---- Sheen (14.00–14.40) and the LED blink (14.00–14.25).
       const sheenLive = t >= SHEEN_START && t < SHEEN_END

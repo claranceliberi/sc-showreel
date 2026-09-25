@@ -199,8 +199,8 @@ crash(effects, 12.5, { intensity: 0.22, length: 1.8 })
 crash(reverbSend, 12.5, { intensity: 0.2, length: 1.8 })
 pad(music, 12.5, 2.0, [48, 55, 64], { intensity: 0.22, attack: 0.05, release: 0.45, cutoffFrom: 3000, cutoffTo: 1600 }) // open C major
 click(effects, 12.75, { intensity: 0.35, pitch: 2400 }) // LED punch
-;[12.77, 12.81, 12.86].forEach((time, index) => bell(effects, time, 96 + index * 3, { duration: 0.35, intensity: 0.05, pan: [-0.5, 0.5, 0][index] }))
-whoosh(effects, 13.1, { duration: 0.2, intensity: 0.2, panFrom: -0.2, panTo: 0.2, brightness: 0.9 }) // wordmark rises
+bell(effects, 12.755, 96, { duration: 0.4, intensity: 0.05 }) // halo flash + ring off the LED
+whoosh(effects, 12.9, { duration: 0.25, intensity: 0.2, panFrom: -0.2, panTo: 0.2, brightness: 0.9 }) // wordmark rises from 12.75
 pluck(effects, 13.25, { frequency: 196, duration: 0.6, intensity: 0.22, brightness: 0.55, seed: 43 }) // callback, octave up
 tok(effects, 13.25, { pitch: 520, intensity: 0.3, decay: 0.015 })
 tickTrain(effects, 13.25, 18, 0.01, { from: 3600, to: 3600, intensity: 0.05, jitterSeed: 400 }) // URL types
