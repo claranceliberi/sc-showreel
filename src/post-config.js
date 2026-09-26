@@ -4,7 +4,8 @@
 // Impact frames that shake the camera (a damped multi-axis oscillation).
 SC.post.hits = [
   { time: 3.0, intensity: 0.45 }, // the extra t lands in "stretch"
-  { time: 14.0, intensity: 1.0 }, // THE SNAP — the film's single peak
+  { time: 14.0, intensity: 0.5 }, // THE SNAP — Cape Town lets go
+  { time: 14.1, intensity: 1.0 }, // the band slams into Kigali — the film's single peak
   { time: 17.5, intensity: 0.3 }, // the Rwanda ring snaps the data back
   { time: 20.0, intensity: 0.3 }, // the band snaps around the phone
   { time: 24.0, intensity: 0.6 }, // the three slabs lock into the mark
