@@ -4,8 +4,9 @@ A 1920×1080, 60 fps motion-graphics piece about Strettch Cloud, built as a dete
 page and rendered frame-by-frame in headless Chromium (true motion blur via sub-frame
 accumulation), with a synthesized sound-design track.
 
-**Latest render:** [`renders/strettch-cloud-showreel.mp4`](renders/strettch-cloud-showreel.mp4)
-(15.00 s · 1920×1080 · 60 fps · H.264 + AAC, 8-sample motion blur with 16–32 samples on fast moves).
+**Renders:** v3 (30 s, 3D) in progress — see `storyboard/v3/TREATMENT.md`.
+The previous 15 s 2D cut is [`renders/strettch-cloud-showreel-15s-v2.mp4`](renders/strettch-cloud-showreel-15s-v2.mp4);
+its source is commit `ae243e3`.
 
 ## Build
 

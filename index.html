@@ -19,7 +19,7 @@
   .sc-scene { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; }
   .sc-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 1000;
     background: radial-gradient(ellipse 75% 70% at 50% 50%, rgba(0,0,0,0) 55%, rgba(2,1,12,0.55) 100%); }
-  .sc-grain { position: absolute; inset: 0; pointer-events: none; z-index: 1001; mix-blend-mode: overlay; }
+  .sc-grain { position: absolute; inset: 0; pointer-events: none; z-index: 1001; }
 
   /* Preview player — hidden when ?render=1 */
   #controls { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px;
@@ -33,7 +33,7 @@
 <div id="frame"></div>
 <div id="controls">
   <button id="play" type="button">Play</button>
-  <input id="scrub" type="range" min="0" max="15" step="0.001" value="0" aria-label="Timeline">
+  <input id="scrub" type="range" min="0" max="30" step="0.001" value="0" aria-label="Timeline">
   <span id="clock">0.000s</span>
 </div>
 
@@ -43,11 +43,18 @@
 <script src="src/engine.js"></script>
 <script src="src/post-config.js"></script>
 <script src="src/scenes/index.js"></script>
-<script>
-  // Scene files are listed in src/scenes/index.js (window.SC_SCENE_FILES) so each scene lives in
-  // its own module and can be built independently.
-  const renderMode = new URLSearchParams(location.search).has('render')
-  if (renderMode) document.body.classList.add('render')
+<script type="importmap">
+  { "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+<script type="module">
+  // three.js is an ES module; the scenes are classic scripts. Expose it globally, then load the
+  // scene files (listed in src/scenes/index.js) in order and start the engine.
+  import * as THREE from 'three'
+  import { SVGLoader } from 'three/addons/loaders/SVGLoader.js'
+  import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
+  import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
+  window.THREE = THREE
+  window.THREE_ADDONS = { SVGLoader, RoomEnvironment, BufferGeometryUtils }
 
   function loadScript(source) {
     return new Promise((resolve, reject) => {
@@ -58,11 +65,15 @@
       document.body.appendChild(script)
     })
   }
-
   window.__scReady = (async () => {
     for (const file of window.SC_SCENE_FILES) await loadScript(`src/scenes/${file}`)
     await SC.init()
   })()
+  window.dispatchEvent(new Event('sc-loading'))
+</script>
+<script>
+  const renderMode = new URLSearchParams(location.search).has('render')
+  if (renderMode) document.body.classList.add('render')
 
   if (!renderMode) {
     const frame = document.getElementById('frame')
@@ -85,7 +96,7 @@
     const tick = (now) => {
       if (!playing) return
       const time = playStartedFrom + (now - playStartedAt) / 1000
-      if (time >= 15) { playing = false; playButton.textContent = 'Play'; show(0); soundtrack.pause(); return }
+      if (time >= SC.DURATION) { playing = false; playButton.textContent = 'Play'; show(0); soundtrack.pause(); return }
       show(time)
       requestAnimationFrame(tick)
     }
@@ -94,7 +105,7 @@
       playButton.textContent = playing ? 'Pause' : 'Play'
       if (playing) {
         playStartedAt = performance.now()
-        playStartedFrom = Number(scrubber.value) >= 14.99 ? 0 : Number(scrubber.value)
+        playStartedFrom = Number(scrubber.value) >= SC.DURATION - 0.01 ? 0 : Number(scrubber.value)
         soundtrack.currentTime = playStartedFrom
         soundtrack.play().catch(() => {})
         requestAnimationFrame(tick)
@@ -103,7 +114,7 @@
       }
     })
     scrubber.addEventListener('input', () => { playing = false; playButton.textContent = 'Play'; soundtrack.pause(); show(Number(scrubber.value)) })
-    window.__scReady.then(() => show(0))
+    window.addEventListener('sc-loading', () => window.__scReady.then(() => { scrubber.max = SC.DURATION; show(0) }))
   }
 </script>
 </body>

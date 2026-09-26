@@ -20,7 +20,8 @@ import { fileURLToPath } from 'node:url'
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FFMPEG = process.env.FFMPEG || '/usr/local/lib/python3.11/dist-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2'
 const FPS = 60
-const DURATION = 15
+// Film length comes from the page (SC.DURATION) once it has loaded; see openPage().
+let DURATION = 30
 
 function parseOptions(argv) {
   const [command, ...rest] = argv
@@ -60,6 +61,7 @@ async function openPage(browser, port, { solo, scale = 1 }) {
   await page.goto(`http://127.0.0.1:${port}/index.html?${query}`)
   await page.evaluate(() => window.__scReady)
   if (pageErrors.length) throw new Error(`Page errors:\n${pageErrors.join('\n')}`)
+  DURATION = await page.evaluate(() => SC.DURATION)
   const cdp = await context.newCDPSession(page)
   // PNG for stills/sheets; video defaults to JPEG q95 (half the capture time, and the final
   // encode is 4:2:0 H.264 anyway so the difference is invisible).
@@ -108,13 +110,13 @@ async function renderStills(browser, port, options) {
 
 async function renderSheet(browser, port, options) {
   const from = Number(options.from ?? 0)
-  const to = Number(options.to ?? DURATION)
   const count = Number(options.count ?? 24)
   const columns = Number(options.columns ?? 6)
   const rows = Math.ceil(count / columns)
   const out = resolve(options.out || join(projectRoot, 'out/sheet.png'))
   await mkdir(dirname(out), { recursive: true })
   const { capture } = await openPage(browser, port, { solo: options.solo, scale: 0.5 })
+  const to = Number(options.to ?? DURATION)
   const ffmpeg = runFfmpeg(['-f', 'image2pipe', '-c:v', 'png', '-i', '-', '-vf', `scale=480:270,tile=${columns}x${rows}:padding=6:color=0x222222`, '-frames:v', '1', out], { input: true })
   for (let index = 0; index < count; index++) {
     const time = count === 1 ? from : from + ((to - from) * index) / (count - 1)
@@ -150,7 +152,6 @@ function planSegments(firstFrame, lastFrame, defaultSubframes, windows, pieceWor
 
 async function renderVideo(browser, port, options) {
   const from = Number(options.from ?? 0)
-  const to = Number(options.to ?? DURATION)
   const defaultSubframes = Number(options.subframes ?? 8)
   const shutter = Number(options.shutter ?? 0.5)
   const scale = Number(options.scale ?? 1)
@@ -160,12 +161,12 @@ async function renderVideo(browser, port, options) {
   const scratch = join(dirname(out), `.chunks-${process.pid}`)
   await mkdir(scratch, { recursive: true })
 
+  const startedAt = Date.now()
+  const pages = await Promise.all(Array.from({ length: workers }, () => openPage(browser, port, { solo: options.solo, scale })))
+  const to = Number(options.to ?? DURATION)
   const firstFrame = Math.round(from * FPS)
   const lastFrame = Math.round(to * FPS) // exclusive
   const totalFrames = lastFrame - firstFrame
-  const startedAt = Date.now()
-
-  const pages = await Promise.all(Array.from({ length: workers }, () => openPage(browser, port, { solo: options.solo, scale })))
   const windows = options['no-windows'] ? [] : await pages[0].page.evaluate(() => SC.post.motionBlurWindows || [])
   const plannedWork = (lastFrame - firstFrame) * defaultSubframes
   const segments = planSegments(firstFrame, lastFrame, defaultSubframes, windows, Math.max(240, plannedWork / (workers * 4)))
@@ -224,7 +225,9 @@ async function renderVideo(browser, port, options) {
 
 const { command, options } = parseOptions(process.argv.slice(2))
 const server = await startServer()
-const browser = await chromium.launch({ args: ['--font-render-hinting=none', '--disable-lcd-text', '--force-color-profile=srgb'] })
+// SwiftShader gives headless Chromium a software WebGL2 implementation for the three.js world.
+const browser = await chromium.launch({ args: ['--font-render-hinting=none', '--disable-lcd-text', '--force-color-profile=srgb',
+  '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
 try {
   const port = server.address().port
   if (command === 'still') await renderStills(browser, port, options)

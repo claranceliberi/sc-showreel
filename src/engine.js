@@ -8,7 +8,7 @@ window.SC = (() => {
   const WIDTH = 1920
   const HEIGHT = 1080
   const FPS = 60
-  const DURATION = 15
+  const DURATION = 30
 
   // ------------------------------------------------------------------------------------------
   // Math
@@ -342,7 +342,7 @@ window.SC = (() => {
   // Logo units: the mark occupies x 0–34, the wordmark x 42.7–186, all within y 0–32.
   // `height` is the rendered px height of the 32-unit-tall box (so 1 unit = height/32 px).
   // Returns { root, markGroup, slabs: {top, middle, bottom}, wordmarkGroup, letters: [{char, word, path, box}] }.
-  function createLogo(parent, { height = 64, markOnly = false } = {}) {
+  function createLogo(parent, { height = 64, markOnly = false, wordmarkColor = window.SC_LOGO.colors.wordmark } = {}) {
     const logo = window.SC_LOGO
     const viewWidth = markOnly ? 34 : logo.viewBox[2]
     const root = svg('svg', { viewBox: `0 0 ${viewWidth} 32`, width: (viewWidth / 32) * height, height, overflow: 'visible' }, parent)
@@ -357,7 +357,7 @@ window.SC = (() => {
     const wordmarkGroup = svg('g', {}, root)
     const letters = logo.letters.map((letter) => ({
       ...letter,
-      path: svg('path', { d: letter.d, fill: logo.colors.wordmark, 'transform-box': 'fill-box', 'transform-origin': 'center' }, wordmarkGroup),
+      path: svg('path', { d: letter.d, fill: wordmarkColor, 'transform-box': 'fill-box', 'transform-origin': 'center' }, wordmarkGroup),
     }))
     return { root, markGroup, slabs, wordmarkGroup, letters }
   }
@@ -375,15 +375,13 @@ window.SC = (() => {
   }
 
   // ------------------------------------------------------------------------------------------
-  // Global post: camera shake + chromatic aberration hits, grain, vignette
+  // Global post: camera shake on hits, grain, vignette
   // ------------------------------------------------------------------------------------------
   const post = {
-    // [{ time, intensity 0..1, aberration 0..1 }] — filled in by src/post-config.js. `intensity`
-    // drives camera shake; `aberration` drives the RGB split separately, because a split strong
-    // enough to feel like an impact also fringes any logo or type that lands on the same beat.
+    // [{ time, intensity 0..1 }] — filled in by src/post-config.js; drives the camera shake.
     hits: [],
     shakeDecay: 0.35, // seconds until a hit's shake has mostly died out
-    grainOpacity: 0.07,
+    grainOpacity: 0.05,
     // Keyframes [[time, opacity], ...] for the vignette. It is tuned for the ink background and
     // turns flat brand violet muddy, so post-config dims it over the violet sections.
     vignette: [[0, 1]],
@@ -394,22 +392,27 @@ window.SC = (() => {
   // Hits start a quarter frame early: the renderer's shutter is centred on each frame, so a hit
   // starting exactly on a frame time would shake only half of that frame's samples and ghost it.
   const HIT_LEAD = 0.25 / FPS
-  function hitEnvelope(time, field) {
-    let strongest = 0
+  // A hit shakes the camera like a real impact: a damped oscillation on three axes (x, y, roll)
+  // with different frequencies and phases, rather than noise. Returns the summed offsets.
+  function shakeAt(time) {
+    const shake = { x: 0, y: 0, roll: 0, strength: 0 }
     for (const hit of post.hits) {
       const start = hit.time - HIT_LEAD
       if (time < start) continue
       const elapsed = time - start
-      const amount = field === 'aberration' ? hit.aberration ?? hit.intensity : hit.intensity
-      strongest = Math.max(strongest, amount * Math.exp(-elapsed / (post.shakeDecay / 3)))
+      const envelope = hit.intensity * Math.exp(-elapsed / (post.shakeDecay / 3))
+      if (envelope < 0.002) continue
+      shake.x += envelope * 16 * Math.sin(2 * Math.PI * 11 * elapsed + hash(hit.time, 1) * 6.28)
+      shake.y += envelope * 11 * Math.sin(2 * Math.PI * 13 * elapsed + hash(hit.time, 2) * 6.28)
+      shake.roll += envelope * 0.45 * Math.sin(2 * Math.PI * 9 * elapsed + hash(hit.time, 3) * 6.28)
+      shake.strength = Math.max(shake.strength, envelope)
     }
-    return strongest
+    return shake
   }
 
   let stage
   let grainCanvas
   let grainTiles = []
-  let caFilterOffsets
   let vignette
   let soloId = null
 
@@ -422,12 +425,16 @@ window.SC = (() => {
       canvas.height = size
       const context = canvas.getContext('2d')
       const image = context.createImageData(size, size)
+      // Symmetric white/black specks blended normally: an overlay-blended grey noise vanishes
+      // on near-black (overlay multiplies dark bases), which left dark scenes grainless and let
+      // gradients band. These specks lift and darken any base equally, which also dithers.
       for (let index = 0; index < image.data.length; index += 4) {
-        const value = random() * 255
-        image.data[index] = value
-        image.data[index + 1] = value
-        image.data[index + 2] = value
-        image.data[index + 3] = 255
+        const value = random()
+        const level = value > 0.5 ? 255 : 0
+        image.data[index] = level
+        image.data[index + 1] = level
+        image.data[index + 2] = level
+        image.data[index + 3] = Math.abs(value - 0.5) * 2 * 255
       }
       context.putImageData(image, 0, 0)
       return canvas
@@ -436,25 +443,11 @@ window.SC = (() => {
 
   function renderPost(time) {
     const frameIndex = Math.floor(time * FPS)
-    // Shake: two noise channels per axis, scaled by the decaying hit envelope.
-    const envelope = hitEnvelope(time, 'intensity')
-    const shakeX = noise(time * 38, 11) * 14 * envelope
-    const shakeY = noise(time * 41, 23) * 10 * envelope
-    const shakeRotate = noise(time * 29, 37) * 0.35 * envelope
-    // Overscan while shaking so the displaced stage never exposes the frame edge (a flickering
-    // black border on full-bleed violet): 3% covers 14 px + 0.35° at full intensity.
-    const overscan = 1 + 0.03 * envelope
-    setStyle(stage, { transform: `translate(${round(shakeX, 2)}px, ${round(shakeY, 2)}px) rotate(${round(shakeRotate, 3)}deg) scale(${round(overscan, 4)})` })
-    // Chromatic aberration: split R and B channels horizontally while a hit is fresh.
-    const aberrationEnvelope = hitEnvelope(time, 'aberration')
-    const aberration = aberrationEnvelope > 0.03 ? aberrationEnvelope * 9 : 0
-    if (aberration > 0) {
-      caFilterOffsets.red.setAttribute('dx', round(aberration, 2))
-      caFilterOffsets.blue.setAttribute('dx', round(-aberration, 2))
-      setStyle(stage, { filter: 'url(#sc-chromatic)' })
-    } else {
-      setStyle(stage, { filter: 'none' })
-    }
+    const shake = shakeAt(time)
+    // Overscan while shaking so the displaced stage never exposes the frame edge:
+    // 3.5% covers 16 px + 0.45° at full intensity.
+    const overscan = 1 + 0.035 * shake.strength
+    setStyle(stage, { transform: `translate(${round(shake.x, 2)}px, ${round(shake.y, 2)}px) rotate(${round(shake.roll, 3)}deg) scale(${round(overscan, 4)})` })
     setStyle(vignette, { opacity: String(round(keyframes(time, post.vignette), 3)) })
     // Grain: pick a tile per frame and jitter its offset so the texture boils at 60 fps.
     const context = grainCanvas.getContext('2d')
@@ -466,19 +459,6 @@ window.SC = (() => {
   }
 
   function buildPostLayers(frame) {
-    const defs = svg('svg', { width: 0, height: 0, style: 'position:absolute' }, document.body)
-    defs.innerHTML = `
-      <filter id="sc-chromatic" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
-        <feOffset in="red" dx="0" dy="0" result="redShifted"/>
-        <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green"/>
-        <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue"/>
-        <feOffset in="blue" dx="0" dy="0" result="blueShifted"/>
-        <feBlend in="redShifted" in2="green" mode="screen" result="redGreen"/>
-        <feBlend in="redGreen" in2="blueShifted" mode="screen"/>
-      </filter>`
-    const offsets = defs.querySelectorAll('feOffset')
-    caFilterOffsets = { red: offsets[0], blue: offsets[1] }
     vignette = el('div', { className: 'sc-vignette' }, frame)
     grainCanvas = el('canvas', { className: 'sc-grain', attrs: { width: WIDTH, height: HEIGHT } }, frame)
     grainCanvas.style.opacity = post.grainOpacity
@@ -491,6 +471,13 @@ window.SC = (() => {
   const api = {} // filled below; handed to every scene's build/render
   let ready = false
   let currentTime = 0
+  // Hooks for layers that aren't scenes (the 3D world): `onInit` runs after the stage exists and
+  // before any scene builds (may be async); `afterRender` runs after every scene has rendered a
+  // frame, so the 3D world draws once with every scene's updates applied.
+  const initHooks = []
+  const afterRenderHooks = []
+  const onInit = (hook) => initHooks.push(hook)
+  const afterRender = (hook) => afterRenderHooks.push(hook)
 
   async function init() {
     const params = new URLSearchParams(location.search)
@@ -508,6 +495,7 @@ window.SC = (() => {
     const frame = document.getElementById('frame')
     stage = el('div', { className: 'sc-stage' }, frame)
     buildPostLayers(frame)
+    for (const hook of initHooks) await hook(stage, api)
 
     scenes.sort((a, b) => a.z - b.z)
     for (const definition of scenes) {
@@ -529,6 +517,7 @@ window.SC = (() => {
       setStyle(definition.root, { display: visible ? 'block' : 'none' })
       if (visible && definition.render) definition.render(currentTime, definition.state, api)
     }
+    for (const hook of afterRenderHooks) hook(currentTime, api)
     renderPost(currentTime)
   }
 
@@ -541,7 +530,7 @@ window.SC = (() => {
     makeProjection, orthographic, ringsToPath, pointInPolygons, africaDots,
     tokens, logoSlabs, createLogo,
     post,
-    scene, init, seek,
+    scene, init, seek, onInit, afterRender,
     get ready() { return ready },
     get time() { return currentTime },
   })
