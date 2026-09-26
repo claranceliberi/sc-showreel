@@ -4,9 +4,11 @@ A 1920×1080, 60 fps motion-graphics piece about Strettch Cloud, built as a dete
 page and rendered frame-by-frame in headless Chromium (true motion blur via sub-frame
 accumulation), with a synthesized sound-design track.
 
-**Renders:** v3 (30 s, 3D) in progress — see `storyboard/v3/TREATMENT.md`.
-The previous 15 s 2D cut is [`renders/strettch-cloud-showreel-15s-v2.mp4`](renders/strettch-cloud-showreel-15s-v2.mp4);
-its source is commit `ae243e3`.
+**Latest render:** [`renders/strettch-cloud-showreel-30s.mp4`](renders/strettch-cloud-showreel-30s.mp4)
+— v3, "The Extra Push": 30 s · 1920×1080 · 60 fps · three.js 3D · H.264 13 Mbps + AAC 320 kbps,
+−15.9 LUFS / −1.3 dBTP. Treatment: `storyboard/v3/TREATMENT.md`.
+The earlier 15 s 2D cut is [`renders/strettch-cloud-showreel-15s-v2.mp4`](renders/strettch-cloud-showreel-15s-v2.mp4)
+(source at commit `ae243e3`).
 
 ## Build
 
@@ -15,7 +17,9 @@ npm install
 node tools/build-assets.mjs          # geo outlines, brand logo glyphs, fonts → src/data, assets/fonts
 node tools/build-rwanda.mjs          # 10m Rwanda border + neighbour dot grid → src/data/rwanda-hires.js (~25 s)
 node render/audio.mjs                # soundtrack → out/audio.wav
-node render/render.mjs video --audio out/audio.wav --out renders/strettch-cloud-showreel.mp4   # ~18 min on 4 CPUs
+node render/render.mjs video --subframes 4 --audio out/audio.wav --out out/master.mp4   # ~1.5 h on 4 CPUs (software WebGL)
+# delivery encode (the master is ~140 MB):
+ffmpeg -i out/master.mp4 -c:v libx264 -preset slow -crf 22 -tune grain -pix_fmt yuv420p -movflags +faststart -c:a copy renders/strettch-cloud-showreel-30s.mp4
 ```
 
 Open `index.html` through any static server (`npx serve .`) for a live preview with a scrubber.
