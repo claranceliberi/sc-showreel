@@ -1141,7 +1141,7 @@
     group.name = 'phone'
     const bevel = 0.012
     const bodyGeometry = new THREE.ExtrudeGeometry(roundedRectShape(width - bevel * 2, height - bevel * 2, radius - bevel), {
-      depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 5, curveSegments: 12,
+      depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 5, curveSegments: 24, // 12 showed flat facets on the e and c in the macro close-up
     })
     bodyGeometry.translate(0, 0, -(depth - bevel * 2) / 2)
     const body = new THREE.Mesh(bodyGeometry, [SC3D.materials.blackGlass.clone(), SC3D.materials.frameMetal.clone()])
@@ -1264,10 +1264,10 @@
       // 14.9–16.0 close on Kigali, slow orbit
       k(16.0, [kigali.x, 0.39, kigali.z], 21, 17, 1.6, 28, -0.6, { sx: 0.2, flow: 0.5 }),
       // 16.0–16.9 glide to the Rwanda macro (Rwanda upper right; copy lower left), drift
-      k(16.9, [rwanda.x, 0.3, rwanda.z], 2, 50, 2.4, 30, 0, { sx: 0.2, sy: 0.12, flow: 0.35 }),
-      k(19.0, [rwanda.x + 0.05, 0.32, rwanda.z], 8, 47, 2.25, 30, 0, { sx: 0.2, sy: 0.12, flow: 0.5 }),
+      k(16.9, [rwanda.x, 0.3, rwanda.z], 2, 50, 1.45, 30, 0, { sx: 0.3, sy: 0.2, flow: 0.35 }), // close enough that Rwanda fills ~half the frame
+      k(19.0, [rwanda.x + 0.05, 0.32, rwanda.z], 8, 47, 1.38, 30, 0, { sx: 0.3, sy: 0.2, flow: 0.5 }), // right and up, clear of the copy
       // 19.0–19.9 glide to the phone (phone right of centre), drift
-      k(19.9, [phone.x, phone.y, phone.z], -24, 6, 3.35, 28, 0, { sx: 0.42, sy: 0.1, flow: 0.3 }),
+      k(19.9, [phone.x, phone.y, phone.z], -24, 6, 3.35, 28, 0, { sx: 0.3, sy: 0.1, flow: 0.3 }), // less right-shift keeps Kigali out of frame
       k(22.0, [phone.x - 0.03, phone.y, phone.z], -18, 5, 3.15, 28, 0, { sx: 0.42, sy: 0.1, flow: 0.4 }),
       // 22.0–24.2 pull back + rise to frame the mark assembly
       k(24.2, [lockup.x, lockup.y, lockup.z], -6, 3, 8.6, 26, 0, { sy: 0.17, flow: 0.5 }),

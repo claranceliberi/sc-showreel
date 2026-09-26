@@ -22,7 +22,7 @@
     release: 17.425, // max stretch — the force loses its grip
     snap: 17.5, // the ring slams back through its rest line: SNAP (camera shake configured)
     copyIn: 17.5, // copy snaps in 17.50–17.78, still and fully legible 17.8–19.3
-    copyOut: 19.3,
+    copyOut: 19.12, // clears before Rwanda settles (19.24) so the copy never fades across the moving slab
     sink: 19.18, // spheres sink into the slab 19.18–19.555 (staggered)
     down: 19.24, // Rwanda settles back flush 19.24–19.58
     flush: 19.58,

@@ -241,19 +241,24 @@
       const finalLayout = SC3D.wordLayout('strettch')
       const shortLayout = SC3D.wordLayout('stretch')
       const align = finalLayout[0].x - shortLayout[0].x
+      // The wordmark's 2D spacing is tuned for flat letters; extruded and bevelled, neighbours
+      // collided in the close-up (the extra t's crossbar ran through the t and the c). Open the
+      // tracking a little, keeping the word centred.
+      const TRACK = 3.4 // logo units per letter
+      const trackOffset = (index, count) => (index - (count - 1) / 2) * TRACK
       const letters = finalLayout.map((item, index) => {
         const isExtra = item.glyph === 5
         const mesh = SC3D.makeLetter(item.glyph, { scale, depth: DEPTH, bevel: BEVEL, material: isExtra ? violet : pearl })
         group.add(mesh)
         const shortIndex = index < 5 ? index : index - 1
-        const finalX = LL.center.x + item.x * scale
+        const finalX = LL.center.x + (item.x + trackOffset(index, 8)) * scale
         const [spanL, spanR] = baseSpan(item.glyph)
         const shadow = SC3D.makeContactShadow({ width: mesh.userData.width * 1.25, depth: 0.2, opacity: 0.4 })
         group.add(shadow)
         return {
           mesh, shadow, index, glyph: item.glyph, isExtra, role: isExtra ? 'extra' : index >= 6 ? 'ch' : 'stret',
           finalX,
-          shortX: isExtra ? finalX : LL.center.x + (shortLayout[shortIndex].x + align) * scale,
+          shortX: isExtra ? finalX : LL.center.x + (shortLayout[shortIndex].x + align + trackOffset(shortIndex, 7)) * scale,
           spanL, spanR, width: mesh.userData.width, height: mesh.userData.height,
           weight: STRAIN_WEIGHT[index],
         }

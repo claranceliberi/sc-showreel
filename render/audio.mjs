@@ -120,14 +120,14 @@ const GROOVE_END = CUES.bandsFly[0]
 widePad(music, CUES.snap, CUES.markLocks - CUES.snap, [48, 55, 62, 64], { intensity: 0.13, attack: 0.3, release: 0.3, cutoffFrom: 900, cutoffTo: 2600 })
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT) {
   if ([CUES.dataSnap, CUES.moneySnap].some((hit) => Math.abs(time - hit) < 1e-6)) continue // those beats get their own hit
-  subHit(drums, time, { intensity: 0.4, length: 0.32, startFrequency: 120, endFrequency: 46 })
+  subHit(drums, time, { intensity: 0.25, length: 0.32, startFrequency: 120, endFrequency: 46 }) // ~4 dB under v1: the groove sat only 2 dB below the snap
 }
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT / 2) {
-  pulse(music, time + 0.0001, 36, { intensity: 0.18, length: 0.18, pan: -0.25 }) // C2
+  pulse(music, time + 0.0001, 36, { intensity: 0.12, length: 0.18, pan: -0.25 }) // C2
 }
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += SIXTEENTH) {
   const step = Math.round((time - GROOVE_START) / SIXTEENTH) % 4
-  hat(drums, time, { intensity: step === 2 ? 0.06 : 0.028, pan: step % 2 ? 0.45 : 0.25 })
+  hat(drums, time, { intensity: step === 2 ? 0.04 : 0.018, pan: step % 2 ? 0.45 : 0.25 })
 }
 
 // --- Act III: closer, twice (16.5–22) ---------------------------------------------------------------
@@ -161,7 +161,7 @@ CUES.bandsFly.forEach((time, index) => { // three bands plucked, twang taut, the
 })
 CUES.slabClicks.forEach((time, index) => tok(effects, time, { pitch: 260 + index * 40, intensity: 0.3, decay: 0.025 })) // slabs click in
 riser(effects, CUES.bandsFly[0], CUES.markLocks, { intensity: 0.3, fromFrequency: 300, toFrequency: 8000, seed: 67 })
-subHit(effects, CUES.markLocks, { intensity: 0.9, length: 1.2, startFrequency: 150, endFrequency: 40 })
+subHit(effects, CUES.markLocks, { intensity: 0.65, length: 1.2, startFrequency: 150, endFrequency: 40 }) // ~3 dB under the snap
 tok(effects, CUES.markLocks, { pitch: 320, intensity: 0.35, decay: 0.03 })
 twang(effects, CUES.markLocks, { from: 392, to: 196, bendTime: 0.07, duration: 1.4, intensity: 0.3, pan: 0.15, seed: 71 }) // motif → G3
 crash(reverbSend, CUES.markLocks, { intensity: 0.15, length: 1.8 })

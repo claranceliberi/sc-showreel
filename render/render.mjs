@@ -211,7 +211,9 @@ async function renderVideo(browser, port, options) {
   const audioArgs = options.audio && existsSync(options.audio)
     ? ['-ss', String(from), '-t', String(to - from), '-i', resolve(options.audio)]
     : []
-  const outputArgs = audioArgs.length ? ['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '256k', '-shortest'] : []
+  // 320 kbps: ffmpeg's native AAC encoder at 256 kbps overshot one transient by +3.6 dB true
+  // peak (−1.4 dBTP in the WAV → +2.2 in the MP4); at 320 kbps it stays at about −1 dBTP.
+  const outputArgs = audioArgs.length ? ['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '320k', '-shortest'] : []
   await runFfmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, ...audioArgs, ...outputArgs,
     // Matroska chunks store 1 ms timestamps, so 1/60 s frames drift and a frame at a chunk seam
     // could be dropped when resampling to 60 fps. Re-stamp every frame from its index instead.

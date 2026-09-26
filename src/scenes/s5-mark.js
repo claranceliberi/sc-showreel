@@ -340,20 +340,22 @@
         }
       }
       // Choreography. hover: taut-line centre (world) + yaw; L = tip-to-tip length; r = strand
-      // radius; bHover = strand half-separation of a stretched loop in r (null = single strand).
+      // radius (about 2× the elastic's rest radius so the flying bars read as solid strokes, not
+      // hairlines, at this camera distance); bHover = strand half-separation of a stretched loop
+      // in r (null = single strand).
       Object.assign(bars.top, {
         source: 'phoneBand', lift: CUE.phoneLift, taut: CUE.phoneTaut, fly: CUE.flyTop, click: CUE.clickTop,
-        hover: V(4.95, 1.42, 0.85), hoverYaw: -0.35, drift: V(-0.25, 0.3, 0.2), hoverL: 1.16, dockL: 1.06, r: 0.0095, bHover: 1.7,
+        hover: V(4.95, 1.42, 0.85), hoverYaw: -0.35, drift: V(-0.25, 0.3, 0.2), hoverL: 1.16, dockL: 1.06, r: 0.02, bHover: 1.7,
         launch: V(-0.45, 0.45, 0.18), approach: V(0.5, 0.06, 0.32), roll: 0.35, dockRoll: 0.3, seed: 3,
       })
       Object.assign(bars.middle, {
         source: 'ring', lift: CUE.ringLift, taut: CUE.ringTaut, fly: CUE.flyMiddle, click: CUE.clickMiddle,
-        hover: V(3.5, 1.12, 1.02), hoverYaw: 0.12, drift: V(0.0, 0.3, 0.15), hoverL: 1.06, dockL: 0.98, r: 0.009, bHover: 1.7,
+        hover: V(3.5, 1.12, 1.02), hoverYaw: 0.12, drift: V(0.0, 0.3, 0.15), hoverL: 1.06, dockL: 0.98, r: 0.019, bHover: 1.7,
         launch: V(-0.1, 0.6, 0.25), approach: V(0.5, 0.04, 0.35), roll: -0.3, dockRoll: -0.26, seed: 5,
       })
       Object.assign(bars.bottom, {
         source: 'band', lift: CUE.coilLift, taut: CUE.coilTaut, fly: CUE.flyBottom, click: CUE.lock,
-        hover: V(3.42, 0.86, 1.12), hoverYaw: -0.12, drift: V(0.0, 0.3, 0.1), hoverL: 1.0, dockL: 0.9, r: 0.0105, bHover: null,
+        hover: V(3.42, 0.86, 1.12), hoverYaw: -0.12, drift: V(0.0, 0.3, 0.1), hoverL: 1.0, dockL: 0.9, r: 0.022, bHover: null,
         launch: V(-0.05, 0.65, 0.25), approach: V(0.46, 0.0, 0.35), roll: 0.4, dockRoll: 0.32, seed: 7,
       })
       for (const bar of Object.values(bars)) {
@@ -439,8 +441,9 @@
         k(22.75, [4.2, 0.92, 0.82], -10, 9.5, 5.3, 28, 0, 0, -0.04, 0.6),
         k(23.0, [4.1, 1.1, 0.86], -11.3, 8.6, 5.4, 28, 0, 0, -0.04, 0),
         k(23.4, [3.3, 2.12, 0.62], -13, 6.6, 5.3, 27.6, 0, -0.08, 0, 0.9),
-        k(23.8, [2.26, 2.96, 0.3], -15, 5, 3.72, 27, 0, -0.2, 0.02, 0),
-        k(24.1, [2.25, 2.96, 0.3], -14.2, 4.6, 3.6, 27, 0, -0.2, 0.02, 0),
+        // The mark formed small in the upper left; centre it and come closer for the lock.
+        k(23.8, [2.26, 2.96, 0.3], -15, 5, 2.9, 27, 0, 0, 0, 0),
+        k(24.1, [2.25, 2.96, 0.3], -14.2, 4.6, 2.8, 27, 0, 0, 0, 0),
         k(24.78, [3.49, 3.0, 0.3], -3.2, 1.2, 7.12, 26, 0, 0, 0.215, 0.45, reveal),
         k(27.0, [3.55, 3.0, 0.3], 0, 0, 6.9, 26, 0, 0, 0.23, 0),
         k(30.0, [3.55, 3.0, 0.3], 0, 0, 6.9, 26, 0, 0, 0.23, 0),
@@ -794,15 +797,15 @@
   // Wordmark ("stretch cloud" stands up) + the t callback
   // ------------------------------------------------------------------------------------------
   const RISE = SC.ease.spring({ stiffness: 210, damping: 23, duration: 0.4 })
-  const RISE_DEPTH = 0.34 // world u below the baseline each letter starts (fully clipped)
   const SHOVE = SC.ease.spring({ stiffness: 320, damping: 15, duration: 0.4 })
   const GAP = 6.6 // logo units "ch cloud" steps aside before the t lands (the t's advance is 9.23)
   function renderWordmark(t, s, api) {
     const S = SC3D.layout.lockup.scale
     const { lockup, ADV, tBox, cBox } = s
     const gap = GAP * api.ease.snappy(api.progress(t, CUE.gapOpen[0], CUE.gapOpen[1]))
-    // letters rise out of the baseline (clip plane just under the glyphs' round overshoots)
-    s.reflectUniforms.uScClipY.value = t < CUE.wordRise[1] + 0.2 ? SC3D.layout.lockup.position.y + (16 - 22.45) * S - 0.009 : -1e3
+    // Letters stand up from lying flat on the floor, pivoting on their baselines. (They used to
+    // slide up through an invisible clip plane, which read as half-drawn, broken glyphs.)
+    s.reflectUniforms.uScClipY.value = -1e3
     // the t: falls from above the frame (stretched with speed), squashes on landing
     const fallT = CUE.tLand - CUE.tFall
     const Y0 = 70 // start height of the t's foot above the baseline, logo units (above frame)
@@ -846,8 +849,7 @@
       const start = CUE.wordRise[0] + order * 0.02
       mesh.visible = t >= start
       const rise = RISE(api.progress(t, start, start + 0.4))
-      mesh.position.y = home.y - RISE_DEPTH * (1 - rise)
-      mesh.rotation.x = -0.38 * (1 - rise)
+      mesh.rotation.x = -(Math.PI / 2) * (1 - rise)
       if (glyph >= 6) {
         // "ch cloud": closed up, steps aside, then is shoved home by the landing t (spring)
         const delay = (glyph - 6) * 0.008

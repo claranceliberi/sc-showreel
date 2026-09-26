@@ -13,7 +13,7 @@
     dragEnd: 8.92, // far end overshoots the Cape Town needle
     catch: 9.0, // …and catches on it: twang; far copy fully in
     spikeRise: 10.4, // tension spike starts
-    spike: 10.5, // spike peak (number reads ~200 from 10.43 to 10.86)
+    spike: 10.5, // spike peak (the number swells; "peaks at 200 ms" arrives on it)
     breath: 12.8, // dead straight, frozen
     antic: 13.93, // last hair of strain before the release
     snap: 14.0, // Cape Town pin pops; release
@@ -82,7 +82,7 @@
       const farValue = api.el('span', { text: '~110' }, farNumber)
       api.el('span', { text: ' ms' }, farNumber)
       const farUnit = api.el('div', { text: 'per request', style: block({ font: '400 44px Inter', color: '#BDBAC8', marginTop: '14px' }) }, far)
-      const farPeak = api.el('div', { text: 'peaks at 200 ms', style: block({ font: '400 44px Inter', color: '#A29DB6', marginTop: '6px' }) }, far)
+      const farPeak = api.el('div', { text: 'peaks at 200 ms', style: block({ font: '500 44px Inter', color: '#CFCBDC', marginTop: '6px' }) }, far)
 
       // Home: upper left, level with the Kigali pin head
       const home = api.el('div', { style: abs({ left: '118px', top: '300px', opacity: '1' }) }, root)
@@ -487,7 +487,8 @@
       const farIn = smooth(8.62, 9.0, t)
       const strainWide = smooth(E.catch, E.breath, t)
       const swell = t < 10.4 ? 0 : t < 10.52 ? api.ease.outCubic(progress(t, 10.4, 10.52)) : t < 10.74 ? 1 : 1 - api.ease.inOutCubic(progress(t, 10.74, 11.0))
-      s.farValue.textContent = t >= 10.43 && t < 10.86 ? '~200' : '~110'
+      // The number stays "~110": swapping it to "~200" under "per request" read as a false claim.
+      // The spike is shown by the swell plus "peaks at 200 ms" arriving on it.
       const collapse = api.ease.inCubic(smooth(E.snap, E.snap + 0.075, t))
       const tracking = lerp(-0.04, 0.08, api.ease.outCubic(farIn)) + 0.04 * strainWide + 0.02 * swell - 0.3 * collapse
       api.setStyle(s.farNumber, {
@@ -502,7 +503,7 @@
       const unitIn = smooth(8.72, 9.0, t)
       setO(s.farUnit, unitIn * snapOut)
       setT(s.farUnit, `translateY(${r1(12 * (1 - unitIn))}px)`)
-      const peakIn = smooth(10.84, 11.0, t)
+      const peakIn = smooth(E.spikeRise, E.spike + 0.08, t)
       setO(s.farPeak, peakIn * snapOut)
       setT(s.farPeak, `translateY(${r1(12 * (1 - peakIn))}px)`)
 
