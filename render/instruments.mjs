@@ -140,3 +140,125 @@ export function pulse(bus, time, midiNote, { intensity = 0.12, length = 0.18, pa
     return lowpass(saw(frequency) * 0.6 + sine(frequency) * 0.4, cutoff, 1.2) * expDecay(localTime, 0.06) * Math.min(1, localTime / 0.002)
   }, { gain: intensity, pan })
 }
+
+// --- Percussion and small sound-design voices -------------------------------------------------
+export function hat(bus, time, { intensity = 0.08, open = false, pan = 0.15 } = {}) {
+  const noise = seededNoise(Math.round(time * 7919))
+  const highpass = createBiquad('highpass')
+  addVoice(bus, time, open ? 0.2 : 0.04, (index) =>
+    highpass(noise(), 7500, 0.8) * expDecay(index / SAMPLE_RATE, open ? 0.06 : 0.008), { gain: intensity, pan })
+}
+export function snare(bus, time, { intensity = 0.4, tail = 0.08 } = {}) {
+  const noise = seededNoise(Math.round(time * 104729))
+  const bandpass = createBiquad('bandpass')
+  const body = createSine()
+  addVoice(bus, time, tail * 4, (index) => {
+    const localTime = index / SAMPLE_RATE
+    return bandpass(noise(), 1900, 0.8) * 2.2 * expDecay(localTime, tail * 0.35) + body(190) * expDecay(localTime, 0.02) * 0.5
+  }, { gain: intensity })
+}
+export function crash(bus, time, { intensity = 0.3, length = 1.6 } = {}) {
+  const noise = seededNoise(99)
+  const highpass = createBiquad('highpass')
+  addVoice(bus, time, length, (index) =>
+    highpass(noise(), 5200, 0.6) * expDecay(index / SAMPLE_RATE, 0.32) * Math.min(1, index / 40), { gain: intensity, panAt: (index) => 0.3 * Math.sin(index / 9000) })
+}
+// Pitched-down snap: a saw whose pitch falls fast, through a closing filter — the band letting go.
+export function snap(bus, time, { from = 330, to = 80, intensity = 0.5 } = {}) {
+  const saw = createSaw()
+  const lowpass = createBiquad('lowpass')
+  addVoice(bus, time, 0.8, (index) => {
+    const localTime = index / SAMPLE_RATE
+    const frequency = to + (from - to) * Math.exp(-localTime * 18)
+    return lowpass(saw(frequency), 400 + 5000 * expDecay(localTime, 0.05), 2) * expDecay(localTime, 0.14)
+  }, { gain: intensity })
+}
+// Short tonal "tok" / tom blip.
+export function tok(bus, time, { pitch = 600, intensity = 0.4, decay = 0.02, pan = 0 } = {}) {
+  const sine = createSine()
+  addVoice(bus, time, decay * 8, (index) => {
+    const localTime = index / SAMPLE_RATE
+    return sine(pitch * (1 + 0.6 * Math.exp(-localTime * 120))) * expDecay(localTime, decay) * Math.min(1, index / 24)
+  }, { gain: intensity, pan })
+}
+export function chirp(bus, time, { from = 2000, to = 4200, length = 0.05, intensity = 0.2 } = {}) {
+  const sine = createSine()
+  addVoice(bus, time, length, (index) => {
+    const progress = index / (length * SAMPLE_RATE)
+    return sine(from * Math.pow(to / from, progress)) * Math.sin(Math.PI * progress)
+  }, { gain: intensity })
+}
+export function subPulse(bus, time, { frequency = 58, length = 0.045, intensity = 0.5 } = {}) {
+  const sine = createSine()
+  addVoice(bus, time, length, (index) => sine(frequency) * Math.sin((Math.PI * index) / (length * SAMPLE_RATE)), { gain: intensity })
+}
+// A tick train: `count` ticks from `start`, `spacing` apart, pitch gliding from→to.
+export function tickTrain(bus, start, count, spacing, { from = 2600, to = 3600, intensity = 0.18, pan = 0, jitterSeed = 1 } = {}) {
+  for (let index = 0; index < count; index++) {
+    const progress = count === 1 ? 0 : index / (count - 1)
+    const pitch = from * Math.pow(to / from, progress) * (1 + 0.04 * (seededNoise(jitterSeed + index)()))
+    tick(bus, start + index * spacing, { pitch, intensity, pan, seed: jitterSeed + index })
+  }
+}
+
+// --- v3 voices -------------------------------------------------------------------------------------
+// The film's sonic logo: an elastic twang. Karplus–Strong string whose delay length glides from
+// `from` Hz to `to` Hz over `bendTime` (the band slackening as it snaps), read with linear
+// interpolation so the pitch bends smoothly.
+export function twang(bus, time, { from = 220, to = 110, bendTime = 0.12, duration = 1.4, intensity = 0.5, brightness = 0.6, pan = 0, seed = 29 } = {}) {
+  const maxPeriod = Math.ceil(SAMPLE_RATE / Math.min(from, to)) + 2
+  const delay = new Float32Array(maxPeriod)
+  const noise = seededNoise(seed)
+  const startPeriod = SAMPLE_RATE / from
+  for (let index = 0; index < maxPeriod; index++) delay[index] = index < startPeriod ? noise() : 0
+  let write = Math.floor(startPeriod)
+  let previous = 0
+  addVoice(bus, time, duration, (index) => {
+    const localTime = index / SAMPLE_RATE
+    const bend = 1 - Math.exp(-localTime / Math.max(bendTime / 3, 1e-4))
+    const period = SAMPLE_RATE / (from + (to - from) * bend)
+    const readPosition = (write - period + maxPeriod) % maxPeriod
+    const low = Math.floor(readPosition)
+    const fraction = readPosition - low
+    const current = delay[low] * (1 - fraction) + delay[(low + 1) % maxPeriod] * fraction
+    const filtered = (current * (0.5 + brightness * 0.5) + previous * (0.5 - brightness * 0.5)) * 0.997
+    previous = current
+    delay[write] = filtered
+    write = (write + 1) % maxPeriod
+    return current * Math.min(1, localTime / 0.001)
+  }, { gain: intensity, pan })
+}
+
+// A wide pad: the same chord voiced twice with different detune, panned hard left and right, so
+// the bed has real stereo width instead of sitting in the centre.
+export function widePad(bus, startTime, duration, midiNotes, options = {}) {
+  const { intensity = 0.15 } = options
+  pad(bus, startTime, duration, midiNotes, { ...options, intensity: intensity * 0.7, pan: -0.85 })
+  pad(bus, startTime + 0.011, duration, midiNotes.map((note) => note + 0.07), { ...options, intensity: intensity * 0.7, pan: 0.85 })
+}
+
+// Bowed tension: a saw through a resonant band-pass whose pitch glides up while an amplitude
+// tremble speeds up — the sound of a band being pulled tighter and tighter.
+export function bowedTension(bus, startTime, endTime, { fromNote = 45, toNote = 57, tremoloFrom = 5, tremoloTo = 16, intensity = 0.12, pan = 0 } = {}) {
+  const saw = createSaw()
+  const bandpass = createBiquad('bandpass')
+  const duration = endTime - startTime
+  let tremoloPhase = 0
+  addVoice(bus, startTime, duration, (index) => {
+    const progress = index / (duration * SAMPLE_RATE)
+    const frequency = noteFrequency(fromNote + (toNote - fromNote) * progress * progress)
+    tremoloPhase += (2 * Math.PI * (tremoloFrom + (tremoloTo - tremoloFrom) * progress)) / SAMPLE_RATE
+    const tremolo = 0.65 + 0.35 * Math.sin(tremoloPhase)
+    const swell = Math.min(1, progress * 3) * Math.min(1, (1 - progress) * duration / 0.01)
+    return bandpass(saw(frequency), frequency * 2, 3) * 3 * tremolo * swell
+  }, { gain: intensity, pan })
+}
+
+// Glass tap: short inharmonic partials — glossy data spheres touching.
+export function glassTap(bus, time, { pitch = 2400, intensity = 0.08, pan = 0 } = {}) {
+  const partials = [1, 2.76, 5.4].map(() => createSine())
+  addVoice(bus, time, 0.25, (index) => {
+    const localTime = index / SAMPLE_RATE
+    return (partials[0](pitch) * 0.6 + partials[1](pitch * 2.76) * 0.3 * expDecay(localTime, 0.03) + partials[2](pitch * 5.4) * 0.15 * expDecay(localTime, 0.01)) * expDecay(localTime, 0.06) * Math.min(1, index / 20)
+  }, { gain: intensity, pan })
+}

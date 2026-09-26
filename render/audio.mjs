@@ -1,276 +1,186 @@
-// The showreel soundtrack, scored to picture from the storyboard's audio cue sheet
-// (storyboard/master.json → audio_cues). 120 BPM; downbeats at 0.5, 2.5, 4.5 … 14.5 with a
-// one-beat pickup. Everything decays to silence exactly at 15.000 s.
+// v3 soundtrack — "The Extra Push", 30 s, scored to picture (storyboard/v3/TREATMENT.md).
+// 120 BPM, downbeats on even seconds. The sonic logo is an elastic twang; the three proof snaps
+// climb C → E → G and the final callback resolves to C. One peak (the snap at 14.0), preceded by
+// the film's only near-silence (the breath). Everything decays to silence at 30.000 s.
 //
 //   node render/audio.mjs            → out/audio.wav
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  SAMPLE_RATE, createBus, addVoice, mixInto, applyReverb, softClip, peak, scaleBus, writeWav, limit,
-  createBiquad, createSine, createSaw, seededNoise, expDecay, noteFrequency,
+  SAMPLE_RATE, createBus, mixInto, applyReverb, softClip, peak, scaleBus, writeWav, limit, noteFrequency,
 } from './synth.mjs'
-import { subHit, riser, whoosh, tick, click, glitch, pluck, pad, bell, pulse } from './instruments.mjs'
+import {
+  subHit, riser, whoosh, tick, pluck, bell, pulse, hat, snare, crash, snap, tok, chirp, tickTrain,
+  twang, widePad, bowedTension, glassTap,
+} from './instruments.mjs'
 
-const DURATION = 15
+const DURATION = 30
 const BEAT = 0.5
 const SIXTEENTH = BEAT / 4
-const THIRTY_SECOND = BEAT / 8
+
+// Every picture-sync time in one place, so retiming to the animation is a one-line change.
+const CUES = {
+  lightUp: 0.0,
+  pullStart: 1.0,
+  pullPeak: 2.5,
+  tLands: 3.0,
+  annotation: 3.6,
+  bandZips: 5.2,
+  continentOverview: 7.0,
+  farCopy: 9.0,
+  spike200: 10.5,
+  breathStart: 12.8,
+  snap: 14.0,
+  homeCopy: 14.6,
+  dataStart: 16.5,
+  dataSnap: 17.5,
+  moneyStart: 19.3,
+  moneyConfirm: 19.8,
+  moneySnap: 20.0,
+  bandsFly: [22.2, 22.6, 23.0],
+  markLocks: 24.0,
+  wordmarkRises: 24.2,
+  tCallback: 25.0,
+  tagline: 26.2,
+  silenceBy: 30.0,
+}
 
 const music = createBus(DURATION) // pads + bass: ducked under impacts
-const drums = createBus(DURATION) // groove kick/hats
+const drums = createBus(DURATION) // groove
 const effects = createBus(DURATION) // picture-synced sound design
 const reverbSend = createBus(DURATION)
 
-// --- Extra voices this score needs beyond instruments.mjs -------------------------------------
-function hat(bus, time, { intensity = 0.08, open = false, pan = 0.15 } = {}) {
-  const noise = seededNoise(Math.round(time * 7919))
-  const highpass = createBiquad('highpass')
-  addVoice(bus, time, open ? 0.2 : 0.04, (index) =>
-    highpass(noise(), 7500, 0.8) * expDecay(index / SAMPLE_RATE, open ? 0.06 : 0.008), { gain: intensity, pan })
-}
-function snare(bus, time, { intensity = 0.4, tail = 0.08 } = {}) {
-  const noise = seededNoise(Math.round(time * 104729))
-  const bandpass = createBiquad('bandpass')
-  const body = createSine()
-  addVoice(bus, time, tail * 4, (index) => {
-    const localTime = index / SAMPLE_RATE
-    return bandpass(noise(), 1900, 0.8) * 2.2 * expDecay(localTime, tail * 0.35) + body(190) * expDecay(localTime, 0.02) * 0.5
-  }, { gain: intensity })
-}
-function crash(bus, time, { intensity = 0.3, length = 1.6 } = {}) {
-  const noise = seededNoise(99)
-  const highpass = createBiquad('highpass')
-  addVoice(bus, time, length, (index) =>
-    highpass(noise(), 5200, 0.6) * expDecay(index / SAMPLE_RATE, 0.32) * Math.min(1, index / 40), { gain: intensity, panAt: (index) => 0.3 * Math.sin(index / 9000) })
-}
-// Pitched-down snap: a saw whose pitch falls fast, through a closing filter — the band letting go.
-function snap(bus, time, { from = 330, to = 80, intensity = 0.5 } = {}) {
-  const saw = createSaw()
-  const lowpass = createBiquad('lowpass')
-  addVoice(bus, time, 0.8, (index) => {
-    const localTime = index / SAMPLE_RATE
-    const frequency = to + (from - to) * Math.exp(-localTime * 18)
-    return lowpass(saw(frequency), 400 + 5000 * expDecay(localTime, 0.05), 2) * expDecay(localTime, 0.14)
-  }, { gain: intensity })
-}
-// Short tonal "tok" / tom blip.
-function tok(bus, time, { pitch = 600, intensity = 0.4, decay = 0.02, pan = 0 } = {}) {
-  const sine = createSine()
-  addVoice(bus, time, decay * 8, (index) => {
-    const localTime = index / SAMPLE_RATE
-    return sine(pitch * (1 + 0.6 * Math.exp(-localTime * 120))) * expDecay(localTime, decay) * Math.min(1, index / 24)
-  }, { gain: intensity, pan })
-}
-function chirp(bus, time, { from = 2000, to = 4200, length = 0.05, intensity = 0.2 } = {}) {
-  const sine = createSine()
-  addVoice(bus, time, length, (index) => {
-    const progress = index / (length * SAMPLE_RATE)
-    return sine(from * Math.pow(to / from, progress)) * Math.sin(Math.PI * progress)
-  }, { gain: intensity })
-}
-function subPulse(bus, time, { frequency = 58, length = 0.045, intensity = 0.5 } = {}) {
-  const sine = createSine()
-  addVoice(bus, time, length, (index) => sine(frequency) * Math.sin((Math.PI * index) / (length * SAMPLE_RATE)), { gain: intensity })
-}
-// A tick train: `count` ticks from `start`, `spacing` apart, pitch gliding from→to.
-function tickTrain(bus, start, count, spacing, { from = 2600, to = 3600, intensity = 0.18, pan = 0, jitterSeed = 1 } = {}) {
-  for (let index = 0; index < count; index++) {
-    const progress = count === 1 ? 0 : index / (count - 1)
-    const pitch = from * Math.pow(to / from, progress) * (1 + 0.04 * (seededNoise(jitterSeed + index)()))
-    tick(bus, start + index * spacing, { pitch, intensity, pan, seed: jitterSeed + index })
-  }
-}
+// --- Act I: the name (0–7) --------------------------------------------------------------------
+riser(effects, CUES.lightUp, CUES.pullStart, { intensity: 0.12, fromFrequency: 120, toFrequency: 900, seed: 3 }) // light rakes up
+widePad(music, CUES.lightUp + 0.2, CUES.tLands - 0.2, [45, 52, 60], { intensity: 0.1, attack: 1.2, release: 0.2, cutoffFrom: 250, cutoffTo: 900 })
+bowedTension(effects, CUES.pullStart, CUES.pullPeak, { fromNote: 50, toNote: 62, tremoloFrom: 6, tremoloTo: 18, intensity: 0.1, pan: 0.3 }) // band stretches
+riser(effects, CUES.pullStart + 0.3, CUES.pullPeak, { intensity: 0.25, fromFrequency: 300, toFrequency: 4000, seed: 5 }) // creak
+whoosh(effects, CUES.tLands - 0.02, { duration: 0.3, intensity: 0.3, panFrom: 0, panTo: 0, brightness: 1.2, seed: 7 }) // the t falls
+subHit(effects, CUES.tLands, { intensity: 0.7, length: 0.9 })
+tok(effects, CUES.tLands, { pitch: 180, intensity: 0.4, decay: 0.05 })
+twang(effects, CUES.tLands, { from: 262, to: 220, bendTime: 0.08, duration: 1.6, intensity: 0.35, pan: -0.15, seed: 31 }) // motif: C4 → A3
+twang(reverbSend, CUES.tLands, { from: 262, to: 220, bendTime: 0.08, duration: 1.6, intensity: 0.25, seed: 33 })
+widePad(music, CUES.tLands, 4.0, [45, 52, 57, 64], { intensity: 0.12, attack: 0.4, release: 0.6, cutoffFrom: 700, cutoffTo: 1600 }) // A minor
+bell(effects, CUES.annotation, 81, { duration: 1.2, intensity: 0.06, pan: 0.4 }) // "the extra push."
+whoosh(effects, CUES.bandZips + 0.35, { duration: 0.6, intensity: 0.35, panFrom: -0.9, panTo: 0.9, brightness: 1.1, seed: 11 }) // band zips away
+riser(effects, CUES.bandZips, CUES.continentOverview, { intensity: 0.22, fromFrequency: 200, toFrequency: 3000, seed: 13 }) // crane up
+subHit(effects, CUES.continentOverview, { intensity: 0.35, length: 0.6, startFrequency: 90, endFrequency: 40 })
 
-// --- 0.00–2.50  s01: the name ------------------------------------------------------------------
-whoosh(effects, 0.15, { duration: 0.25, intensity: 0.25, panFrom: 0, panTo: 0, brightness: 0.6 }) // air intake
-tickTrain(effects, 0.2, 7, 0.02, { from: 2400, to: 3800, intensity: 0.12, jitterSeed: 10 }) // "stretch" rises
-subHit(effects, 0.5, { intensity: 0.8 }) // weight slam
-tok(effects, 0.5, { pitch: 150, intensity: 0.35, decay: 0.05 })
-riser(effects, 0.75, 1.5, { intensity: 0.45, fromFrequency: 300, toFrequency: 5000, seed: 21 }) // rubber-band creak (pull 0.75)
-pluck(effects, 1.4, { frequency: 147, duration: 0.25, intensity: 0.12, brightness: 0.7, seed: 19 }) // band goes taut
-whoosh(effects, 1.45, { duration: 0.25, intensity: 0.35, panFrom: 0, panTo: 0, brightness: 1.3 }) // the falling t
-subHit(effects, 1.5, { intensity: 1.0 })
-snare(effects, 1.5, { intensity: 0.45, tail: 0.1 })
-snare(reverbSend, 1.5, { intensity: 0.3, tail: 0.1 })
-pluck(effects, 1.5, { frequency: 98, duration: 1.2, intensity: 0.4, brightness: 0.5 })
-whoosh(effects, 1.64, { duration: 0.15, intensity: 0.22, panFrom: -0.1, panTo: -0.5, brightness: 1.6 }) // ink swipe
-tickTrain(effects, 1.75, 5, 0.02, { from: 900, to: 1300, intensity: 0.2, jitterSeed: 30 }) // "cloud" bounces
+// --- Act II: far vs home (7–16.5) -----------------------------------------------------------------
+widePad(music, CUES.continentOverview, CUES.breathStart - CUES.continentOverview, [45, 52, 59, 60], { intensity: 0.13, attack: 1.0, release: 0.05, cutoffFrom: 400, cutoffTo: 1300 })
+for (let time = CUES.continentOverview; time < CUES.breathStart - 0.01; time += 1.0) { // heartbeat
+  subHit(drums, time, { intensity: 0.28, length: 0.3, startFrequency: 80, endFrequency: 45 })
+  subHit(drums, time + 0.18, { intensity: 0.16, length: 0.25, startFrequency: 80, endFrequency: 45 })
+}
+bowedTension(effects, CUES.continentOverview + 0.3, CUES.breathStart, { fromNote: 45, toNote: 60, tremoloFrom: 4, tremoloTo: 17, intensity: 0.14, pan: -0.2 }) // the far band
+bowedTension(effects, CUES.continentOverview + 0.3, CUES.breathStart, { fromNote: 52.05, toNote: 67.05, tremoloFrom: 4.3, tremoloTo: 17.5, intensity: 0.1, pan: 0.35 })
+riser(effects, CUES.spike200 - 0.3, CUES.spike200 + 0.1, { intensity: 0.2, fromFrequency: 800, toFrequency: 6000, seed: 17 }) // 200 ms spike
+pluck(effects, CUES.spike200 + 0.1, { frequency: 82, duration: 1.2, intensity: 0.2, brightness: 0.35, seed: 37 })
+riser(effects, CUES.farCopy + 1.5, CUES.breathStart, { intensity: 0.3, fromFrequency: 200, toFrequency: 7000, seed: 19 }) // long build, cut at the breath
+// The breath (12.8–14.0): everything above cuts; only a thin high tone remains, fading to nothing.
+chirp(effects, CUES.breathStart, { from: 3520, to: 3500, length: CUES.snap - CUES.breathStart - 0.15, intensity: 0.015 })
 
-// --- 2.50–6.50  s01→s02: tension bed ------------------------------------------------------------
-const TENSION_END = 6.483 // everything but the riser drops one frame before the snap
-pad(music, 2.5, TENSION_END - 2.5, [45, 52, 59, 60], { intensity: 0.2, attack: 0.9, release: 0.02, cutoffFrom: 380, cutoffTo: 1500 }) // A minor add9
-for (let time = 2.5; time < TENSION_END - 0.01; time += BEAT / 2) {
-  pulse(music, time, 33, { intensity: 0.2, length: 0.2 }) // A1 on 8ths
-}
-for (let time = 2.5; time < TENSION_END - 0.01; time += SIXTEENTH) {
-  const onBeat = Math.abs((time - 2.5) / BEAT - Math.round((time - 2.5) / BEAT)) < 1e-6
-  hat(drums, time, { intensity: onBeat ? 0.05 : 0.03 })
-}
-for (let time = 2.5; time < TENSION_END - 0.01; time += 2 * BEAT) subHit(drums, time, { intensity: 0.35, length: 0.35, startFrequency: 110, endFrequency: 48 })
+// THE SNAP — the film's single peak.
+subHit(effects, CUES.snap, { intensity: 1.5, length: 1.6, startFrequency: 180, endFrequency: 32 })
+subHit(effects, CUES.snap + 0.09, { intensity: 0.35, length: 0.6, startFrequency: 160, endFrequency: 38 }) // slapback
+snap(effects, CUES.snap, { intensity: 0.5 })
+twang(effects, CUES.snap, { from: 440, to: 110, bendTime: 0.18, duration: 2.2, intensity: 0.45, pan: 0, seed: 41 }) // motif, big bend down
+twang(reverbSend, CUES.snap, { from: 440, to: 110, bendTime: 0.18, duration: 2.2, intensity: 0.35, seed: 43 })
+whoosh(effects, CUES.snap + 0.25, { duration: 0.45, intensity: 0.55, panFrom: 0.95, panTo: -0.95, brightness: 1.6, seed: 23 }) // camera whip
+crash(effects, CUES.snap, { intensity: 0.2, length: 2.0 })
+crash(reverbSend, CUES.snap, { intensity: 0.2, length: 2.0 })
+tok(effects, CUES.homeCopy, { pitch: 130, intensity: 0.4, decay: 0.05 }) // "10–30 ms" lands
 
-whoosh(effects, 2.8, { duration: 0.12, intensity: 0.15, panFrom: 0.3, panTo: -0.2, brightness: 1.2 }) // annotation retracts
-whoosh(effects, 2.745, { duration: 0.18, intensity: 0.12, panFrom: 0.3, panTo: 0, brightness: 0.5 }) // anticipation intake, stops dead 2.76
-whoosh(effects, 2.934, { duration: 0.29, intensity: 0.35, panFrom: -0.8, panTo: 0.8 }) // camera pull-back 2.76–3.05
-tok(effects, 3.02, { pitch: 150, intensity: 0.3, decay: 0.03 }) // "strettch" drops out as one word
-tickTrain(effects, 3.095, 12, 0.008, { from: 1600, to: 3400, intensity: 0.09, pan: 0.2, jitterSeed: 60 }) // "Africa-first" rises
-tok(effects, 3.25, { pitch: 520, intensity: 0.45, decay: 0.015 }) // the period pops
-// Granular shimmer as the continent assembles outward from Kigali.
-whoosh(effects, 3.75, { duration: 0.8, intensity: 0.2, panFrom: -0.4, panTo: 0.4, brightness: 2 })
-for (let grain = 0; grain < 22; grain++) {
-  const random = seededNoise(500 + grain)
-  tick(effects, 3.25 + grain * 0.035 + random() * 0.01, { pitch: 3000 + random() * 2500, intensity: 0.05 * (1 - grain / 26), pan: random() * 0.8, seed: 700 + grain })
-}
-for (const time of [3.5, 4.0, 4.5, 5.0, 5.5, 6.0]) { // Kigali heartbeat
-  const sine = createSine()
-  addVoice(effects, time, 0.12, (index) => sine(880) * expDecay(index / SAMPLE_RATE, 0.025), { gain: 0.1, pan: 0.35 })
-}
-whoosh(effects, 4.3, { duration: 0.5, intensity: 0.3, panFrom: 0.1, panTo: 0.6, brightness: 0.8 }) // packet launch
-whoosh(effects, 4.476, { duration: 0.16, intensity: 0.12, panFrom: -0.6, panTo: 0.5, brightness: 1.4 }) // hairline reels into Kigali 4.38–4.54
-tok(effects, 4.5, { pitch: 900, intensity: 0.3, decay: 0.01, pan: 0.4 }) // packet hits Cape Town
-tickTrain(effects, 4.5, 19, 0.01, { from: 3000, to: 3000, intensity: 0.05, pan: -0.3, jitterSeed: 80 }) // kicker types on
-tickTrain(effects, 4.5625, 8, THIRTY_SECOND, { from: 1800, to: 2400, intensity: 0.14, pan: -0.25, jitterSeed: 100 }) // odometer
-bell(effects, 5.0, 88, { duration: 0.4, intensity: 0.12, pan: -0.25 }) // odometer locks at ~110
-tok(effects, 5.0, { pitch: 1400, intensity: 0.2, decay: 0.01, pan: -0.25 })
-pluck(effects, 5.25, { frequency: 82, duration: 1.2, intensity: 0.35, brightness: 0.35, seed: 31 }) // route plucked
-pluck(effects, 5.25, { frequency: 82.9, duration: 1.2, intensity: 0.25, brightness: 0.35, seed: 37 })
-glitch(effects, 5.25, { duration: 0.2, intensity: 0.2 })
-// Tension: the band is dragged south and trembles (5.50–6.42, 6→16 Hz), dies 6.42–6.48, and the
-// frame holds dead still for one breath before the snap. The riser cuts on that breath.
-riser(effects, 5.5, 6.483, { intensity: 0.6, fromFrequency: 200, toFrequency: 9000, seed: 41 }) // tension riser
-chirp(effects, 5.5, { from: 600, to: 1900, length: 0.92, intensity: 0.05 }) // string-tension whine (tremble 5.50–6.42)
-tok(effects, 6.4, { pitch: 95, intensity: 0.12, decay: 0.03 }) // last yank of the Cape Town end
-
-// --- 6.50–8.50  s03: THE SNAP, the crash-zoom and the release groove -----------------------------
-// Event times come from the TIME table in src/scenes/shared-map.js.
-subHit(effects, 6.5, { intensity: 1.45, length: 1.4, startFrequency: 170, endFrequency: 34 }) // the film's biggest low end
-subHit(effects, 6.59, { intensity: 0.35, length: 0.6, startFrequency: 160, endFrequency: 38 }) // slapback
-snap(effects, 6.5, { intensity: 0.45 }) // the band lets go
-crash(reverbSend, 6.5, { intensity: 0.12, length: 1.2 })
-whoosh(effects, 6.56, { duration: 0.1, intensity: 0.2, panFrom: 0.4, panTo: -0.1, brightness: 1.8, seed: 13 }) // whip home 6.50–6.573
-tok(effects, 6.573, { pitch: 110, intensity: 0.45, decay: 0.05 }) // band lands on Kigali: impact ring + shockwave
-tok(effects, 6.618, { pitch: 300, intensity: 0.12, decay: 0.02, pan: -0.2 }) // overshoot peak
-whoosh(effects, 6.96, { duration: 0.35, intensity: 0.5, panFrom: -0.9, panTo: 0.9, brightness: 1.6 }) // crash-zoom 6.75–7.10, fastest ~6.85
-tok(effects, 7.0625, { pitch: 180, intensity: 0.4, decay: 0.03 }) // bottom slab lands
-tok(effects, 7.09375, { pitch: 240, intensity: 0.4, decay: 0.03 }) // middle slab lands
-tok(effects, 7.125, { pitch: 320, intensity: 0.45, decay: 0.035 }) // top slab locks
-chirp(effects, 7.125, { from: 2000, to: 4200, length: 0.05, intensity: 0.12 }) // LED lights
-// Odometer roll-down 7.125 → locks at 7.1875 / 7.234 / 7.281 / 7.328 / 7.375.
-tickTrain(effects, 7.125, 8, 0.03125, { from: 3200, to: 1500, intensity: 0.1, jitterSeed: 120 })
-;[7.1875, 7.234, 7.281, 7.328].forEach((time, index) => tick(effects, time, { pitch: 2400 - index * 150, intensity: 0.16, seed: 140 + index }))
-tok(effects, 7.375, { pitch: 140, intensity: 0.45, decay: 0.04 }) // "10–30 ms" lock thud
-tick(effects, 7.42, { pitch: 1400, intensity: 0.08, pan: -0.3, seed: 150 }) // comparison line rises
-for (const time of [7.5, 8.0]) { // LED heartbeat ring + ripple through lit Rwanda
-  const sine = createSine()
-  addVoice(effects, time, 0.14, (index) => sine(988) * expDecay(index / SAMPLE_RATE, 0.03), { gain: 0.08, pan: 0.45 })
-  bell(effects, time + 0.02, 100, { duration: 0.3, intensity: 0.025, pan: 0.5 })
-}
-
-const GROOVE_START = 7.0
-const GROOVE_END = 12.5
-pad(music, 7.0, 3.0, [48, 55, 62, 64], { intensity: 0.2, attack: 0.25, release: 0.15, cutoffFrom: 900, cutoffTo: 2400 }) // C major add9
+// Release groove from the snap to the mark lock: C major, kick on the beat, bass on 8ths, hats.
+const GROOVE_START = CUES.snap + BEAT
+const GROOVE_END = CUES.bandsFly[0]
+widePad(music, CUES.snap, CUES.markLocks - CUES.snap, [48, 55, 62, 64], { intensity: 0.13, attack: 0.3, release: 0.3, cutoffFrom: 900, cutoffTo: 2600 })
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT) {
-  // The 8.5 cut has its own sub whomp; a groove kick on top beats against it (a doubled
-  // "whomp-WHOMP"), so the groove rests on that beat.
-  if (Math.abs(time - 8.5) < 1e-6) continue
-  subHit(drums, time, { intensity: 0.45, length: 0.35, startFrequency: 120, endFrequency: 46 })
+  if ([CUES.dataSnap, CUES.moneySnap].some((hit) => Math.abs(time - hit) < 1e-6)) continue // those beats get their own hit
+  subHit(drums, time, { intensity: 0.4, length: 0.32, startFrequency: 120, endFrequency: 46 })
 }
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += BEAT / 2) {
-  pulse(music, time + 0.0001, 36, { intensity: 0.22, length: 0.18 }) // C2 on 8ths
+  pulse(music, time + 0.0001, 36, { intensity: 0.18, length: 0.18, pan: -0.25 }) // C2
 }
 for (let time = GROOVE_START; time < GROOVE_END - 0.01; time += SIXTEENTH) {
-  const beatPosition = Math.round((time - GROOVE_START) / SIXTEENTH) % 4
-  hat(drums, time, { intensity: beatPosition === 2 ? 0.07 : 0.035, open: beatPosition === 2 && Math.round((time - GROOVE_START) / BEAT) % 2 === 1 })
+  const step = Math.round((time - GROOVE_START) / SIXTEENTH) % 4
+  hat(drums, time, { intensity: step === 2 ? 0.06 : 0.028, pan: step % 2 ? 0.45 : 0.25 })
 }
 
-// --- 8.50–10.00  s04: in-country -----------------------------------------------------------------
-subHit(effects, 8.5, { intensity: 0.5, length: 0.8, startFrequency: 110, endFrequency: 40 }) // whomp
-tok(effects, 8.572, { pitch: 420, intensity: 0.22, decay: 0.012 }) // the line bursts out of the centre
-whoosh(effects, 8.6, { duration: 0.05, intensity: 0.12, panFrom: 0, panTo: 0, brightness: 2, seed: 87 })
-// D, i and the period hit Rwanda's rim together (8.619–8.620), the s at 8.624, the y grazes at 8.635.
-;[8.619, 8.62, 8.6205, 8.624].forEach((time, index) => {
-  tok(effects, time, { pitch: 210 - index * 18, intensity: 0.22, decay: 0.03, pan: [-0.5, 0.3, 0.45, -0.2][index] })
-})
-tok(effects, 8.635, { pitch: 260, intensity: 0.08, decay: 0.02, pan: 0.2 }) // y grazes
-tok(effects, 8.7, { pitch: 90, intensity: 0.12, decay: 0.06 }) // rim rebounds inward
-riser(effects, 9.75, 10.0, { intensity: 0.4, fromFrequency: 1500, toFrequency: 12000, seed: 51 }) // reverse cymbal
-whoosh(effects, 9.965, { duration: 0.15, intensity: 0.35, panFrom: 0, panTo: 0, brightness: 1.8 }) // fly-through
-
-// --- 10.00–12.50  s05: spec stack ----------------------------------------------------------------
-pad(music, 10.0, 2.5, [53, 57, 60, 64], { intensity: 0.2, attack: 0.08, release: 0.1, cutoffFrom: 1400, cutoffTo: 3000 }) // F major 7
-tickTrain(effects, 10.0, 39, 0.0077, { from: 3400, to: 3400, intensity: 0.05, jitterSeed: 200 }) // teletype
-subHit(effects, 10.5, { intensity: 0.4, length: 0.5 })
-;[10.625, 10.688, 10.75, 10.812].forEach((time, index) => {
-  tok(effects, time, { pitch: 700 * Math.pow(2, -index / 12), intensity: 0.3, decay: 0.012 }) // drum locks 3-9-9-9
-  tick(effects, time, { pitch: 2600 * Math.pow(2, -index / 12), intensity: 0.2, seed: 300 + index })
-})
-;[11.0625, 11.125, 11.1875].forEach((time) => subPulse(effects, time, { intensity: 0.25 })) // Mobile Money buzz
-tok(effects, 11.25, { pitch: 520, intensity: 0.4, decay: 0.015 }) // period pops
-for (let time = 11.5; time < 12.5 - 0.01;) { // snare roll 16ths → 32nds
-  const progress = (time - 11.5) / 1.0
-  snare(effects, time, { intensity: 0.08 + 0.2 * progress * progress, tail: 0.05 })
-  time += progress < 0.5 ? SIXTEENTH : THIRTY_SECOND
+// --- Act III: closer, twice (16.5–22) ---------------------------------------------------------------
+for (let index = 0; index < 14; index++) { // glossy data spheres touching, scattered in stereo
+  const time = CUES.dataStart + 0.15 + index * 0.06 + (index % 3) * 0.013
+  glassTap(effects, time, { pitch: 1800 + (index * 337) % 1400, intensity: 0.05, pan: ((index * 0.37) % 1.6) - 0.8 })
 }
-riser(effects, 11.5, 12.5, { intensity: 0.4, fromFrequency: 300, toFrequency: 8000, seed: 61 })
-// Fuse: each line's type sinks while a paper bar wipes in on the logo angle (line 1, line 3,
-// then the price line last); the price drops out as one unit at 12.272–12.337.
-whoosh(effects, 12.34, { duration: 0.15, intensity: 0.14, panFrom: -0.7, panTo: 0.7, brightness: 1.5, seed: 81 }) // bar 1 wipe 12.25–12.40
-whoosh(effects, 12.373, { duration: 0.15, intensity: 0.12, panFrom: -0.7, panTo: 0.7, brightness: 1.2, seed: 83 }) // bar 3 wipe 12.283–12.433
-whoosh(effects, 12.407, { duration: 0.15, intensity: 0.16, panFrom: -0.7, panTo: 0.7, brightness: 1.0, seed: 85 }) // bar 2 wipe 12.317–12.467
-tok(effects, 12.3, { pitch: 120, intensity: 0.3, decay: 0.035 }) // "3,999" drops out
+bowedTension(effects, CUES.dataSnap - 0.5, CUES.dataSnap, { fromNote: 55, toNote: 62, tremoloFrom: 8, tremoloTo: 20, intensity: 0.1, pan: -0.35 }) // ring stretches
+subHit(effects, CUES.dataSnap, { intensity: 0.5, length: 0.6, startFrequency: 130, endFrequency: 45 })
+twang(effects, CUES.dataSnap, { from: 294, to: 131, bendTime: 0.09, duration: 1.3, intensity: 0.32, pan: -0.4, seed: 47 }) // motif → C3
+twang(reverbSend, CUES.dataSnap, { from: 294, to: 131, bendTime: 0.09, duration: 1.3, intensity: 0.2, seed: 49 })
+whoosh(effects, CUES.moneyStart + 0.2, { duration: 0.35, intensity: 0.3, panFrom: 0.8, panTo: 0.1, brightness: 1.0, seed: 51 }) // phone swings in
+bell(effects, CUES.moneyConfirm, 84, { duration: 0.6, intensity: 0.08, pan: 0.35 }) // payment confirmed
+bell(effects, CUES.moneyConfirm + 0.08, 88, { duration: 0.6, intensity: 0.06, pan: 0.45 })
+subHit(effects, CUES.moneySnap, { intensity: 0.5, length: 0.6, startFrequency: 130, endFrequency: 45 })
+twang(effects, CUES.moneySnap, { from: 370, to: 165, bendTime: 0.09, duration: 1.3, intensity: 0.32, pan: 0.4, seed: 53 }) // motif → E3
+twang(reverbSend, CUES.moneySnap, { from: 370, to: 165, bendTime: 0.09, duration: 1.3, intensity: 0.2, seed: 55 })
 
-// --- 12.50–15.00  s06: lockup and resolve ----------------------------------------------------------
-subHit(effects, 12.5, { intensity: 1.0, length: 1.2, startFrequency: 150, endFrequency: 40 })
-snare(effects, 12.5, { intensity: 0.35, tail: 0.1 })
-crash(effects, 12.5, { intensity: 0.22, length: 1.8 })
-crash(reverbSend, 12.5, { intensity: 0.2, length: 1.8 })
-pad(music, 12.5, 2.0, [48, 55, 64], { intensity: 0.22, attack: 0.05, release: 0.45, cutoffFrom: 3000, cutoffTo: 1600 }) // open C major
-click(effects, 12.75, { intensity: 0.35, pitch: 2400 }) // LED punch
-bell(effects, 12.755, 96, { duration: 0.4, intensity: 0.05 }) // halo flash + ring off the LED
-whoosh(effects, 12.9, { duration: 0.25, intensity: 0.2, panFrom: -0.2, panTo: 0.2, brightness: 0.9 }) // wordmark rises from 12.75
-pluck(effects, 13.25, { frequency: 196, duration: 0.6, intensity: 0.22, brightness: 0.55, seed: 43 }) // callback, octave up
-tok(effects, 13.25, { pitch: 520, intensity: 0.3, decay: 0.015 })
-tickTrain(effects, 13.25, 18, 0.01, { from: 3600, to: 3600, intensity: 0.05, jitterSeed: 400 }) // URL types
-bell(effects, 14.0, 76, { duration: 1.0, intensity: 0.22 }) // sting E5
-bell(reverbSend, 14.0, 76, { duration: 1.0, intensity: 0.25 })
-bell(effects, 14.03, 83, { duration: 0.9, intensity: 0.06, pan: 0.4 }) // shimmer
-bell(effects, 14.06, 88, { duration: 0.8, intensity: 0.04, pan: -0.4 })
-pad(music, 14.5, 0.1, [72], { intensity: 0.08, attack: 0.02, release: 0.4, cutoffFrom: 2400, cutoffTo: 2400 }) // final C5
+// --- Act IV: the mark (22–30) ---------------------------------------------------------------------
+CUES.bandsFly.forEach((time, index) => { // three bands lift and straighten: rising plucks
+  pluck(effects, time, { frequency: [131, 165, 196][index], duration: 0.8, intensity: 0.2, brightness: 0.7, seed: 61 + index })
+  whoosh(effects, time + 0.15, { duration: 0.25, intensity: 0.18, panFrom: [-0.7, 0.7, 0][index], panTo: 0, brightness: 1.3, seed: 63 + index })
+})
+riser(effects, CUES.bandsFly[0], CUES.markLocks, { intensity: 0.3, fromFrequency: 300, toFrequency: 8000, seed: 67 })
+subHit(effects, CUES.markLocks, { intensity: 0.9, length: 1.2, startFrequency: 150, endFrequency: 40 })
+tok(effects, CUES.markLocks, { pitch: 320, intensity: 0.35, decay: 0.03 })
+twang(effects, CUES.markLocks, { from: 392, to: 196, bendTime: 0.07, duration: 1.4, intensity: 0.3, pan: 0.15, seed: 71 }) // motif → G3
+crash(reverbSend, CUES.markLocks, { intensity: 0.15, length: 1.8 })
+widePad(music, CUES.markLocks, DURATION - CUES.markLocks - 1.2, [48, 55, 64, 67], { intensity: 0.14, attack: 0.1, release: 1.1, cutoffFrom: 2600, cutoffTo: 1400 }) // C major add G
+whoosh(effects, CUES.wordmarkRises + 0.2, { duration: 0.35, intensity: 0.18, panFrom: -0.3, panTo: 0.3, brightness: 0.9, seed: 73 })
+whoosh(effects, CUES.tCallback - 0.03, { duration: 0.25, intensity: 0.2, panFrom: 0, panTo: 0, brightness: 1.4, seed: 75 }) // t falls
+subHit(effects, CUES.tCallback, { intensity: 0.45, length: 0.7 })
+twang(effects, CUES.tCallback, { from: 587, to: 523, bendTime: 0.08, duration: 2.4, intensity: 0.3, pan: 0, seed: 79 }) // motif resolves → C5
+twang(reverbSend, CUES.tCallback, { from: 587, to: 523, bendTime: 0.08, duration: 2.4, intensity: 0.3, seed: 81 })
+bell(effects, CUES.tagline, 72, { duration: 2.5, intensity: 0.12 })
+bell(effects, CUES.tagline + 0.04, 79, { duration: 2.2, intensity: 0.06, pan: -0.5 })
+bell(effects, CUES.tagline + 0.08, 84, { duration: 2.0, intensity: 0.05, pan: 0.5 })
+bell(reverbSend, CUES.tagline, 72, { duration: 2.5, intensity: 0.2 })
 
-// --- Mix ---------------------------------------------------------------------------------------
-// Sidechain: duck the music under each impact so the hits breathe (deeper for the big ones).
-const ducks = [[0.5, 0.5], [1.5, 0.7], [6.5, 0.9], [8.5, 0.5], [10.5, 0.3], [12.5, 0.8]]
-for (let time = GROOVE_START; time < GROOVE_END; time += BEAT) ducks.push([time, 0.25])
+// --- Mix ------------------------------------------------------------------------------------------
+// Sidechain: duck the music under each impact so the hits breathe.
+const ducks = [[CUES.tLands, 0.5], [CUES.snap, 0.95], [CUES.dataSnap, 0.4], [CUES.moneySnap, 0.4], [CUES.markLocks, 0.7], [CUES.tCallback, 0.35]]
+for (let time = GROOVE_START; time < GROOVE_END; time += BEAT) ducks.push([time, 0.22])
 for (let index = 0; index < music.length; index++) {
   const time = index / SAMPLE_RATE
   let gain = 1
   for (const [duckTime, depth] of ducks) {
     if (time >= duckTime && time < duckTime + 0.6) gain = Math.min(gain, 1 - depth * Math.exp(-(time - duckTime) / 0.09))
   }
+  // The breath: the bed drops out entirely so the snap lands out of near-silence.
+  if (time >= CUES.breathStart && time < CUES.snap) gain *= Math.max(0, 1 - (time - CUES.breathStart) / 0.12)
   music.left[index] *= gain
   music.right[index] *= gain
 }
 
 const master = createBus(DURATION)
-mixInto(master, music, 1.9)
-mixInto(master, drums, 1.4)
+mixInto(master, music, 1.8)
+mixInto(master, drums, 1.3)
 mixInto(master, effects, 1)
-// Reverb sends: a little of everything plus the dedicated sends.
 mixInto(reverbSend, music, 0.35)
 mixInto(reverbSend, effects, 0.2)
-mixInto(master, applyReverb(reverbSend, { roomSize: 0.88, damping: 0.4 }), 0.6)
+mixInto(master, applyReverb(reverbSend, { roomSize: 0.9, damping: 0.35 }), 0.65)
 
-// Tail: guarantee silence at exactly 15.000 s (the picture is dead still from 14.5).
+// Tail: guarantee silence at exactly 30.000 s (the picture is dead still from 28.0).
+const fadeStart = CUES.silenceBy - 1.2
 for (let index = 0; index < master.length; index++) {
   const time = index / SAMPLE_RATE
-  const fade = time < 14.55 ? 1 : Math.pow(Math.max(0, (DURATION - time) / (DURATION - 14.55)), 2)
+  const fade = time < fadeStart ? 1 : Math.pow(Math.max(0, (CUES.silenceBy - time) / (CUES.silenceBy - fadeStart)), 2)
   master.left[index] *= fade
   master.right[index] *= fade
 }
 
 // Loudness: push into the limiter so the bed sits up with the hits (~−14 LUFS integrated),
-// then soft-clip the last fraction of a dB and leave true-peak headroom for the AAC encode.
-const MASTER_DRIVE = Number(process.env.MASTER_DRIVE || 2.15)
+// soft-clip the last fraction of a dB, and leave true-peak headroom for the AAC encode.
+const MASTER_DRIVE = Number(process.env.MASTER_DRIVE || 3.0)
 scaleBus(master, MASTER_DRIVE * 0.9 / peak(master))
 limit(master, { ceiling: 0.95, attackSeconds: 0.002, releaseSeconds: 0.08 })
 softClip(master, 0.9)
@@ -278,4 +188,4 @@ scaleBus(master, 0.78 / peak(master)) // sample peak ≈ −2.2 dBFS keeps true 
 const output = join(dirname(fileURLToPath(import.meta.url)), '../out/audio.wav')
 mkdirSync(dirname(output), { recursive: true })
 writeWav(output, master)
-console.log(`${output} (${DURATION}s @ ${SAMPLE_RATE} Hz, ${noteFrequency(69)} Hz tuning)`)
+console.log(`${output} (${DURATION}s @ ${SAMPLE_RATE} Hz, tuned to A4 = ${noteFrequency(69)} Hz)`)
