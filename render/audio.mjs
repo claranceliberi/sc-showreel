@@ -49,11 +49,15 @@ const CUES = {
   moneyConfirm: 19.8,
   moneyRelease: 19.9,
   moneySnap: 20.0,
-  bandsFly: [22.2, 22.6, 23.0],
+  bandsFly: [22.2, 22.6, 23.0], // phone band, Rwanda ring, Kigali band are plucked
+  bandsTaut: [22.5, 22.84, 23.2],
+  bandsLaunch: [23.0, 23.12, 23.22],
+  slabClicks: [23.75, 23.875],
   markLocks: 24.0,
-  wordmarkRises: 24.2,
+  wordmarkRises: 24.04,
+  chSlides: 24.75,
   tCallback: 25.0,
-  tagline: 26.2,
+  tagline: 25.8,
   silenceBy: 30.0,
 }
 
@@ -150,18 +154,21 @@ twang(effects, CUES.moneySnap, { from: 370, to: 165, bendTime: 0.09, duration: 1
 twang(reverbSend, CUES.moneySnap, { from: 370, to: 165, bendTime: 0.09, duration: 1.3, intensity: 0.2, seed: 55 })
 
 // --- Act IV: the mark (22–30) ---------------------------------------------------------------------
-CUES.bandsFly.forEach((time, index) => { // three bands lift and straighten: rising plucks
+CUES.bandsFly.forEach((time, index) => { // three bands plucked, twang taut, then launch: rising C–E–G
   pluck(effects, time, { frequency: [131, 165, 196][index], duration: 0.8, intensity: 0.2, brightness: 0.7, seed: 61 + index })
-  whoosh(effects, time + 0.15, { duration: 0.25, intensity: 0.18, panFrom: [-0.7, 0.7, 0][index], panTo: 0, brightness: 1.3, seed: 63 + index })
+  twang(effects, CUES.bandsTaut[index], { from: [131, 165, 196][index] * 1.06, to: [131, 165, 196][index], bendTime: 0.05, duration: 0.6, intensity: 0.1, pan: [0.5, -0.5, 0][index], seed: 65 + index })
+  whoosh(effects, CUES.bandsLaunch[index] + 0.15, { duration: 0.25, intensity: 0.18, panFrom: [0.7, -0.7, 0][index], panTo: 0, brightness: 1.3, seed: 63 + index })
 })
+CUES.slabClicks.forEach((time, index) => tok(effects, time, { pitch: 260 + index * 40, intensity: 0.3, decay: 0.025 })) // slabs click in
 riser(effects, CUES.bandsFly[0], CUES.markLocks, { intensity: 0.3, fromFrequency: 300, toFrequency: 8000, seed: 67 })
 subHit(effects, CUES.markLocks, { intensity: 0.9, length: 1.2, startFrequency: 150, endFrequency: 40 })
 tok(effects, CUES.markLocks, { pitch: 320, intensity: 0.35, decay: 0.03 })
 twang(effects, CUES.markLocks, { from: 392, to: 196, bendTime: 0.07, duration: 1.4, intensity: 0.3, pan: 0.15, seed: 71 }) // motif → G3
 crash(reverbSend, CUES.markLocks, { intensity: 0.15, length: 1.8 })
 widePad(music, CUES.markLocks, DURATION - CUES.markLocks - 1.2, [48, 55, 64, 67], { intensity: 0.14, attack: 0.1, release: 1.1, cutoffFrom: 2600, cutoffTo: 1400 }) // C major add G
-whoosh(effects, CUES.wordmarkRises + 0.2, { duration: 0.35, intensity: 0.18, panFrom: -0.3, panTo: 0.3, brightness: 0.9, seed: 73 })
-whoosh(effects, CUES.tCallback - 0.03, { duration: 0.25, intensity: 0.2, panFrom: 0, panTo: 0, brightness: 1.4, seed: 75 }) // t falls
+whoosh(effects, CUES.wordmarkRises + 0.21, { duration: 0.35, intensity: 0.18, panFrom: -0.3, panTo: 0.3, brightness: 0.9, seed: 73 }) // wordmark rises
+whoosh(effects, CUES.chSlides + 0.09, { duration: 0.15, intensity: 0.12, panFrom: 0, panTo: 0.5, brightness: 1.2, seed: 77 }) // "ch cloud" slides aside
+whoosh(effects, CUES.tCallback - 0.1, { duration: 0.28, intensity: 0.2, panFrom: 0, panTo: 0, brightness: 1.4, seed: 75 }) // t falls from 24.72
 subHit(effects, CUES.tCallback, { intensity: 0.45, length: 0.7 })
 twang(effects, CUES.tCallback, { from: 587, to: 523, bendTime: 0.08, duration: 2.4, intensity: 0.3, pan: 0, seed: 79 }) // motif resolves → C5
 twang(reverbSend, CUES.tCallback, { from: 587, to: 523, bendTime: 0.08, duration: 2.4, intensity: 0.3, seed: 81 })
@@ -209,7 +216,7 @@ const MASTER_DRIVE = Number(process.env.MASTER_DRIVE || 3.0)
 scaleBus(master, MASTER_DRIVE * 0.9 / peak(master))
 limit(master, { ceiling: 0.95, attackSeconds: 0.002, releaseSeconds: 0.08 })
 softClip(master, 0.9)
-scaleBus(master, 0.78 / peak(master)) // sample peak ≈ −2.2 dBFS keeps true peak under −1 dBTP
+scaleBus(master, 0.74 / peak(master)) // sample peak ≈ −2.6 dBFS keeps true peak under −1 dBTP
 const output = join(dirname(fileURLToPath(import.meta.url)), '../out/audio.wav')
 mkdirSync(dirname(output), { recursive: true })
 writeWav(output, master)
